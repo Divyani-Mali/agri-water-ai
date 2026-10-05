@@ -1,9 +1,11 @@
-import { Navigate, Route, Routes } from "react-router-dom";
-import Layout from "./components/Layout";
-import ProtectedRoute from "./components/ProtectedRoute";
-import Dashboard from "./pages/Dashboard";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
+import { Navigate, Route, Routes } from 'react-router-dom'
+import Layout from './components/Layout'
+import ProtectedRoute from './components/ProtectedRoute'
+import Dashboard from './pages/Dashboard'
+import FarmDetail from './pages/FarmDetail'
+import FieldDetail from './pages/FieldDetail'
+import Login from './pages/Login'
+import Register from './pages/Register'
 
 export default function App() {
   return (
@@ -14,10 +16,12 @@ export default function App() {
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/farms/:farmId" element={<FarmDetail />} />
+          <Route path="/fields/:fieldId" element={<FieldDetail />} />
         </Route>
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
-  );
+  )
 }
