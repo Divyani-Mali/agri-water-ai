@@ -10,6 +10,7 @@ from app.models.models import SensorReading, User
 from app.models.models import Field as FieldModel
 from app.routers.farms import get_field_or_404
 from app.schemas.farm import ReadingCreate, ReadingOut
+from app.services.alert_service import evaluate_reading
 
 router = APIRouter(prefix="/api/fields", tags=["Sensor Readings"])
 
@@ -56,6 +57,13 @@ def add_reading(field_id: int, data: ReadingCreate, db: Session = Depends(get_db
     db.add(reading)
     db.commit()
     db.refresh(reading)
+
+    # alerts must never break sensor data ingestion
+    try:
+        evaluate_reading(db, field, reading)
+    except Exception:
+        db.rollback()
+
     return reading
 
 

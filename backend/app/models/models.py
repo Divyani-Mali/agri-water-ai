@@ -88,6 +88,7 @@ class Alert(Base):
     field_id = Column(Integer, ForeignKey("fields.id"), nullable=False, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     severity = Column(String, default="info")  # info / warning / critical
+    alert_type = Column(String, default="general")  # dry_soil / heat_stress / heavy_rain / sensor_offline
     message = Column(Text, nullable=False)
     is_read = Column(Boolean, default=False)
 

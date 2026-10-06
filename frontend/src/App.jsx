@@ -1,6 +1,9 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
+import AdminRoute from './components/AdminRoute'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
+import Admin from './pages/Admin'
+import Alerts from './pages/Alerts'
 import Dashboard from './pages/Dashboard'
 import FarmDetail from './pages/FarmDetail'
 import FieldDetail from './pages/FieldDetail'
@@ -18,6 +21,10 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/farms/:farmId" element={<FarmDetail />} />
           <Route path="/fields/:fieldId" element={<FieldDetail />} />
+          <Route path="/alerts" element={<Alerts />} />
+          <Route element={<AdminRoute />}>
+            <Route path="/admin" element={<Admin />} />
+          </Route>
         </Route>
       </Route>
 
