@@ -27,8 +27,12 @@ api.interceptors.response.use(
 
 // turns any API error into a readable message
 export function errorMessage(err) {
-  if (!err.response) return "Cannot reach the server. Is the backend running?";
+  if (!err.response)
+    return "Cannot reach the server. Please check that the backend is running.";
+  const status = err.response.status;
   const detail = err.response.data?.detail;
+  if (status === 403 && typeof detail !== "string")
+    return "You do not have permission to do that.";
   if (typeof detail === "string") return detail;
   if (Array.isArray(detail) && detail.length) {
     return detail[0].msg.replace("Value error, ", "");

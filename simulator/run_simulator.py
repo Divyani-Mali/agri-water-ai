@@ -100,6 +100,32 @@ def fetch_field(session, api, token, field_id) -> dict:
     return r.json()
 
 
+def fetch_all_field_ids(session, api, token) -> list[int]:
+    headers = {"Authorization": f"Bearer {token}"}
+    user_response = session.get(f"{api}/api/auth/me", headers=headers, timeout=10)
+    if user_response.status_code != 200:
+        sys.exit(f"Could not verify account ({user_response.status_code}). Check the login.")
+    if user_response.json().get("role") != "admin":
+        sys.exit("--fields all requires an admin account so it can access every user's farms.")
+
+    farms_response = session.get(f"{api}/api/farms", headers=headers, timeout=10)
+    if farms_response.status_code != 200:
+        sys.exit(f"Could not list farms ({farms_response.status_code}).")
+
+    field_ids = []
+    for farm in farms_response.json():
+        fields_response = session.get(
+            f"{api}/api/farms/{farm['id']}/fields", headers=headers, timeout=10
+        )
+        if fields_response.status_code != 200:
+            sys.exit(f"Could not list fields for farm {farm['id']} ({fields_response.status_code}).")
+        field_ids.extend(field["id"] for field in fields_response.json())
+
+    if not field_ids:
+        sys.exit("No fields found to simulate.")
+    return field_ids
+
+
 def send(session, api, key, field_id, reading, ts) -> bool:
     payload = {**reading, "timestamp": ts.isoformat()}
     r = session.post(
@@ -120,7 +146,7 @@ def main():
     p.add_argument("--email", required=True)
     p.add_argument("--password", required=True)
     p.add_argument("--key", default="agri-sensor-key-12345")
-    p.add_argument("--fields", default="1", help="comma separated field ids, e.g. 1,2")
+    p.add_argument("--fields", default="1", help="comma-separated field IDs (e.g. 1,2) or 'all' (admin only)")
     p.add_argument("--interval", type=float, default=3.0, help="real seconds between live readings")
     p.add_argument("--backfill-days", type=int, default=14, help="history to create first (0 = none)")
     p.add_argument("--dropout", type=float, default=0.03, help="chance a sensor misses a reading")
@@ -133,7 +159,12 @@ def main():
 
     try:
         token = login(session, api, args.email, args.password)
-        ids = [int(x) for x in args.fields.split(",") if x.strip()]
+        if args.fields.strip().lower() == "all":
+            ids = fetch_all_field_ids(session, api, token)
+        else:
+            ids = [int(x) for x in args.fields.split(",") if x.strip()]
+            if not ids:
+                sys.exit("Provide at least one field ID or use --fields all.")
         sims = [FieldSim(fetch_field(session, api, token, i), args.seed) for i in ids]
     except requests.exceptions.ConnectionError:
         sys.exit("Cannot reach the API. Is the server running (uvicorn app.main:app --reload)?")
