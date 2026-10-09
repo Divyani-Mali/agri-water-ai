@@ -1,3 +1,7 @@
+from urllib.parse import parse_qs, urlparse
+
+from app.core.config import settings
+
 USER = {"email": "a@test.com", "full_name": "Test User", "password": "Test1234"}
 
 
@@ -46,3 +50,53 @@ def test_login_and_me(client):
 
 def test_me_without_token(client):
     assert client.get("/api/auth/me").status_code == 401
+
+
+def test_password_reset_changes_password_and_token_is_single_use(client, monkeypatch):
+    register(client)
+    monkeypatch.setattr(settings, "SMTP_HOST", "")
+    monkeypatch.setattr(settings, "SMTP_FROM", "")
+    monkeypatch.setattr(settings, "PASSWORD_RESET_DEV_MODE", True)
+
+    requested = client.post("/api/auth/password-reset/request", json={"email": USER["email"]})
+    assert requested.status_code == 200
+    token = parse_qs(urlparse(requested.json()["reset_url"]).query)["token"][0]
+
+    changed = client.post(
+        "/api/auth/password-reset/confirm",
+        json={"token": token, "password": "NewPassword123"},
+    )
+    assert changed.status_code == 200
+    assert login(client).status_code == 401
+    assert login(client, password="NewPassword123").status_code == 200
+    assert client.post(
+        "/api/auth/password-reset/confirm",
+        json={"token": token, "password": "AnotherPassword123"},
+    ).status_code == 400
+
+
+def test_password_reset_unknown_email_does_not_return_reset_link(client, monkeypatch):
+    monkeypatch.setattr(settings, "SMTP_HOST", "")
+    monkeypatch.setattr(settings, "SMTP_FROM", "")
+    monkeypatch.setattr(settings, "PASSWORD_RESET_DEV_MODE", True)
+
+    response = client.post(
+        "/api/auth/password-reset/request",
+        json={"email": "unknown@test.com"},
+    )
+
+    assert response.status_code == 200
+    assert "reset_url" not in response.json()
+
+
+def test_password_reset_fails_closed_without_delivery_configuration(client, monkeypatch):
+    monkeypatch.setattr(settings, "SMTP_HOST", "")
+    monkeypatch.setattr(settings, "SMTP_FROM", "")
+    monkeypatch.setattr(settings, "PASSWORD_RESET_DEV_MODE", False)
+
+    response = client.post(
+        "/api/auth/password-reset/request",
+        json={"email": "unknown@test.com"},
+    )
+
+    assert response.status_code == 503
