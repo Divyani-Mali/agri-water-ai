@@ -15,6 +15,9 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     role = Column(String, default="farmer")  # farmer / admin
     is_active = Column(Boolean, default=True)
+    preferred_language = Column(
+        String, nullable=False, default="en", server_default="en"
+    )  # en / hi / mr
     created_at = Column(DateTime, default=datetime.utcnow)
 
     farms = relationship("Farm", back_populates="owner", cascade="all, delete")
@@ -51,6 +54,9 @@ class Field(Base):
     readings = relationship("SensorReading", back_populates="field", cascade="all, delete")
     forecasts = relationship("Forecast", back_populates="field", cascade="all, delete")
     alerts = relationship("Alert", back_populates="field", cascade="all, delete")
+    irrigation_logs = relationship(
+        "IrrigationLog", back_populates="field", cascade="all, delete"
+    )
 
 
 class SensorReading(Base):
@@ -87,9 +93,23 @@ class Alert(Base):
     id = Column(Integer, primary_key=True, index=True)
     field_id = Column(Integer, ForeignKey("fields.id"), nullable=False, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
-    severity = Column(String, default="info")  # info / warning / critical
     alert_type = Column(String, default="general")  # dry_soil / heat_stress / heavy_rain / sensor_offline
-    message = Column(Text, nullable=False)
+    severity = Column(String, default="info")  # info / warning / critical
+    message = Column(Text, nullable=False)  # English text, kept as a fallback
+    params = Column(Text, nullable=True)  # JSON with the numbers, used to translate the alert
     is_read = Column(Boolean, default=False)
 
     field = relationship("Field", back_populates="alerts")
+
+
+class IrrigationLog(Base):
+    __tablename__ = "irrigation_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    field_id = Column(Integer, ForeignKey("fields.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    minutes = Column(Float, nullable=False)
+    source = Column(String, default="chat")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    field = relationship("Field", back_populates="irrigation_logs")

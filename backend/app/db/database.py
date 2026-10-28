@@ -20,12 +20,29 @@ def get_db():
 
 
 def ensure_schema():
-    """Tiny migration: add columns introduced after the table was first created."""
+    """Tiny migration: add columns introduced after a table was first created,
+    so existing data is kept. (New tables are created by create_all.)"""
     insp = inspect(engine)
-    if "alerts" in insp.get_table_names():
-        cols = [c["name"] for c in insp.get_columns("alerts")]
+    tables = insp.get_table_names()
+    statements = []
+
+    if "alerts" in tables:
+        cols = {c["name"] for c in insp.get_columns("alerts")}
         if "alert_type" not in cols:
-            with engine.begin() as conn:
-                conn.execute(
-                    text("ALTER TABLE alerts ADD COLUMN alert_type VARCHAR DEFAULT 'general'")
-                )
+            statements.append(
+                "ALTER TABLE alerts ADD COLUMN alert_type VARCHAR DEFAULT 'general'"
+            )
+        if "params" not in cols:
+            statements.append("ALTER TABLE alerts ADD COLUMN params TEXT")
+
+    if "users" in tables:
+        cols = {c["name"] for c in insp.get_columns("users")}
+        if "preferred_language" not in cols:
+            statements.append(
+                "ALTER TABLE users ADD COLUMN preferred_language VARCHAR NOT NULL DEFAULT 'en'"
+            )
+
+    if statements:
+        with engine.begin() as conn:
+            for statement in statements:
+                conn.execute(text(statement))

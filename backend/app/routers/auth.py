@@ -6,7 +6,7 @@ from app.core.deps import get_current_user
 from app.core.security import create_access_token, hash_password, verify_password
 from app.db.database import get_db
 from app.models.models import User
-from app.schemas.user import Token, UserCreate, UserOut
+from app.schemas.user import ProfileUpdate, Token, UserCreate, UserOut
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
@@ -26,6 +26,7 @@ def register(data: UserCreate, db: Session = Depends(get_db)):
         full_name=data.full_name.strip(),
         hashed_password=hash_password(data.password),
         role=role,
+        preferred_language=data.preferred_language,
     )
     db.add(user)
     db.commit()
@@ -52,4 +53,16 @@ def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get
 
 @router.get("/me", response_model=UserOut)
 def me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+
+@router.patch("/me", response_model=UserOut)
+def update_me(
+    data: ProfileUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    current_user.preferred_language = data.preferred_language
+    db.commit()
+    db.refresh(current_user)
     return current_user
