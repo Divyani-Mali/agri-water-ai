@@ -1,375 +1,195 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Legend,
-  Line,
-  LineChart,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import api, { errorMessage } from "../api/client";
-import {
-  SOIL_RANGE,
-  cap,
-  fmtTime,
-  irrigationTrigger,
-  moistureStatus,
-  toDate,
-} from "../constants";
+import { cap, fmtClock, fmtDate, fmtNum, fmtTime, moistureStatus, timeAgo, toDate } from "../constants";
+import Badge from "../components/ui/Badge";
+import Button from "../components/ui/Button";
+import Icon from "../components/ui/Icon";
+import PageHeader from "../components/ui/PageHeader";
+import { Banner, EmptyState, ErrorState, Skeleton } from "../components/ui/Feedback";
+import MetricCard, { MoistureCard } from "../components/field/MetricCard";
+import ReadingCharts from "../components/field/ReadingCharts";
+import ForecastPanel from "../components/field/ForecastPanel";
 
-function StatCard({ title, value, unit, note, noteClass = "text-gray-400" }) {
-  return (
-    <div className="rounded-xl bg-white p-4 shadow">
-      <p className="text-xs uppercase tracking-wide text-gray-400">{title}</p>
-      <p className="mt-1 text-2xl font-bold text-gray-800">
-        {value}
-        <span className="ml-1 text-sm font-normal text-gray-500">{unit}</span>
-      </p>
-      {note && (
-        <p className={`mt-1 text-xs font-medium ${noteClass}`}>{note}</p>
-      )}
-    </div>
-  );
-}
+const OFFLINE_AFTER_MINUTES = 10;
+const POLL_MS = 5000;
 
 export default function FieldDetail() {
   const { fieldId } = useParams();
-
   const [field, setField] = useState(null);
+  const [farm, setFarm] = useState(null);
   const [fieldError, setFieldError] = useState("");
-
   const [readings, setReadings] = useState(null);
   const [readingsError, setReadingsError] = useState("");
   const [now, setNow] = useState(() => Date.now());
+  const inFlight = useRef(false);
 
-  const [days, setDays] = useState(3);
-  const [forecast, setForecast] = useState(null);
-  const [forecastError, setForecastError] = useState("");
-  const [forecastLoading, setForecastLoading] = useState(true);
-
-  // field info
-  useEffect(() => {
-    api
-      .get(`/api/fields/${fieldId}`)
-      .then((res) => setField(res.data))
-      .catch((err) => setFieldError(errorMessage(err)));
+  const loadField = useCallback(async () => {
+    try {
+      const { data } = await api.get(`/api/fields/${fieldId}`);
+      setField(data);
+      setFieldError("");
+      api.get(`/api/farms/${data.farm_id}`).then((r) => setFarm(r.data)).catch(() => {});
+    } catch (err) {
+      setFieldError(errorMessage(err));
+    }
   }, [fieldId]);
 
-  // live sensor readings: refresh every 5 seconds
+  useEffect(() => {
+    // Clear data from the previous field before loading the new route parameter.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setField(null);
+    setFarm(null);
+    setReadings(null);
+    loadField();
+  }, [loadField]);
+
+  // live readings every 5 seconds; skip a tick if the previous request is still running
   useEffect(() => {
     let active = true;
-    const load = () =>
-      api
-        .get(`/api/fields/${fieldId}/readings`, { params: { limit: 72 } })
-        .then((res) => {
-          if (!active) return;
-          setReadings(res.data);
-          setReadingsError("");
-          setNow(Date.now());
-        })
-        .catch((err) => {
-          if (active) setReadingsError(errorMessage(err));
-        });
+    const load = async () => {
+      if (inFlight.current) return;
+      inFlight.current = true;
+      try {
+        const { data } = await api.get(`/api/fields/${fieldId}/readings`, { params: { limit: 100 } });
+        if (!active) return;
+        setReadings(data);
+        setReadingsError("");
+        setNow(Date.now());
+      } catch (err) {
+        if (active) setReadingsError(errorMessage(err));
+      } finally {
+        inFlight.current = false;
+      }
+    };
     load();
-    const timer = setInterval(load, 5000);
+    const timer = setInterval(load, POLL_MS);
     return () => {
       active = false;
+      inFlight.current = false;
       clearInterval(timer);
     };
   }, [fieldId]);
 
-  // AI forecast
-  useEffect(() => {
-    let active = true;
-    api
-      .get(`/api/fields/${fieldId}/forecast`, { params: { days } })
-      .then((res) => {
-        if (!active) return;
-        setForecast(res.data);
-        setForecastError("");
-      })
-      .catch((err) => {
-        if (!active) return;
-        setForecast(null);
-        setForecastError(errorMessage(err));
-      })
-      .finally(() => {
-        if (active) setForecastLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [fieldId, days]);
-
+  // API returns newest first; charts need oldest first
   const chartData = useMemo(
-    () =>
-      readings
-        ? [...readings]
-            .reverse()
-            .map((r) => ({ ...r, label: fmtTime(r.timestamp) }))
-        : [],
+    () => (readings ? [...readings].reverse().map((r) => ({ ...r, label: fmtClock(r.timestamp) })) : []),
     [readings],
   );
 
   if (fieldError) {
     return (
-      <div className="space-y-3">
-        <div className="rounded bg-red-50 p-3 text-sm text-red-700">
-          {fieldError}
-        </div>
-        <Link to="/" className="text-green-700 underline">
-          ← Back to dashboard
+      <>
+        <PageHeader title="Field" crumbs={[{ label: "Farms", to: "/" }, { label: "Not available" }]} />
+        <ErrorState message={fieldError} onRetry={loadField} />
+        <Link to="/" className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-forest-700 hover:underline">
+          <Icon name="arrowLeft" size={15} /> Back to farms
         </Link>
+      </>
+    );
+  }
+
+  if (!field) {
+    return (
+      <div className="space-y-4" aria-busy="true">
+        <Skeleton className="h-8 w-1/3" />
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+          {[0, 1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-32" />)}
+        </div>
+        <Skeleton className="h-72 w-full" />
       </div>
     );
   }
-  if (!field) return <p className="text-gray-500">Loading...</p>;
 
   const latest = readings && readings.length > 0 ? readings[0] : null;
-  const range = SOIL_RANGE[field.soil_type] || SOIL_RANGE.loamy;
-  const status = latest
-    ? moistureStatus(latest.soil_moisture, field.soil_type)
-    : null;
-  const ageMinutes = latest
-    ? Math.round((now - toDate(latest.timestamp)) / 60000)
-    : null;
-  const offline = latest && ageMinutes > 10;
+  const ageMinutes = latest ? Math.max(0, Math.round((now - toDate(latest.timestamp).getTime()) / 60000)) : null;
+  const offline = latest && ageMinutes > OFFLINE_AFTER_MINUTES;
+  const status = latest ? moistureStatus(latest.soil_moisture, field.soil_type) : null;
+
+  let connection = <Badge tone="gray">Waiting for data</Badge>;
+  if (latest) {
+    connection = offline ? (
+      <Badge tone="red"><Icon name="wifiOff" size={12} /> Sensors offline</Badge>
+    ) : (
+      <Badge tone="green"><Icon name="wifi" size={12} /> Sensors online</Badge>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <Link
-          to={`/farms/${field.farm_id}`}
-          className="text-sm text-green-700 hover:underline"
-        >
-          ← Back to farm
-        </Link>
-        <h1 className="mt-1 text-2xl font-bold text-gray-800">{field.name}</h1>
-        <p className="text-sm text-gray-500">
-          {cap(field.crop_type)} · {cap(field.soil_type)} soil ·{" "}
-          {field.area_acres} acres · planted {field.planting_date}
-        </p>
-      </div>
-
-      {readingsError && (
-        <div className="rounded bg-red-50 p-3 text-sm text-red-700">
-          {readingsError}
-        </div>
-      )}
-
-      {readings && readings.length === 0 && (
-        <div className="rounded bg-amber-50 p-4 text-sm text-amber-800">
-          No sensor data yet for this field. Start the sensor simulator for
-          field ID <b>{field.id}</b> (see the steps below the code).
-        </div>
-      )}
-
-      {offline && (
-        <div className="rounded bg-amber-50 p-3 text-sm text-amber-800">
-          ⚠ Sensors offline: the last reading arrived {ageMinutes} minutes ago.
-        </div>
-      )}
-
-      {latest && (
-        <>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
-            <StatCard
-              title="Soil moisture"
-              value={latest.soil_moisture}
-              unit="%"
-              note={status.label}
-              noteClass={status.cls}
-            />
-            <StatCard
-              title="Temperature"
-              value={latest.temperature}
-              unit="°C"
-            />
-            <StatCard title="Humidity" value={latest.humidity} unit="%" />
-            <StatCard title="Rainfall" value={latest.rainfall} unit="mm" />
-            <StatCard title="Wind" value={latest.wind_speed} unit="km/h" />
+    <>
+      <PageHeader
+        title={field.name}
+        crumbs={[
+          { label: "Farms", to: "/" },
+          { label: farm ? farm.name : "Farm", to: `/farms/${field.farm_id}` },
+          { label: field.name },
+        ]}
+        action={
+          <Button as={Link} to={`/farms/${field.farm_id}`} variant="secondary" icon="arrowLeft">
+            Back to farm
+          </Button>
+        }
+        meta={
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+            <Badge tone="green">{cap(field.crop_type)}</Badge>
+            <Badge>{cap(field.soil_type)} soil</Badge>
+            <Badge>{field.area_acres} acres</Badge>
+            <Badge>Planted {fmtDate(field.planting_date)}</Badge>
+            {connection}
           </div>
-          <p className="-mt-3 text-xs text-gray-400">
-            Last reading: {fmtTime(latest.timestamp)} · refreshes every 5
-            seconds
-          </p>
+        }
+      />
 
-          <div className="rounded-xl bg-white p-5 shadow">
-            <h2 className="mb-3 font-semibold text-gray-700">
-              Soil moisture (%)
-            </h2>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="label"
-                    minTickGap={50}
-                    tick={{ fontSize: 11 }}
-                  />
-                  <YAxis
-                    domain={[Math.floor(range.wp - 2), Math.ceil(range.fc + 2)]}
-                    tick={{ fontSize: 11 }}
-                  />
-                  <Tooltip />
-                  <ReferenceLine
-                    y={irrigationTrigger(field.soil_type)}
-                    stroke="#dc2626"
-                    strokeDasharray="5 5"
-                    label={{
-                      value: "Irrigation trigger",
-                      fontSize: 11,
-                      fill: "#dc2626",
-                    }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="soil_moisture"
-                    name="Soil moisture"
-                    stroke="#2e7d32"
-                    dot={false}
-                    strokeWidth={2}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+      <div className="space-y-6">
+        {readingsError && <ErrorState message={readingsError} />}
 
-          <div className="rounded-xl bg-white p-5 shadow">
-            <h2 className="mb-3 font-semibold text-gray-700">
-              Temperature and humidity
-            </h2>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis
-                    dataKey="label"
-                    minTickGap={50}
-                    tick={{ fontSize: 11 }}
-                  />
-                  <YAxis tick={{ fontSize: 11 }} />
-                  <Tooltip />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="temperature"
-                    name="Temperature (°C)"
-                    stroke="#ef6c00"
-                    dot={false}
-                    strokeWidth={2}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="humidity"
-                    name="Humidity (%)"
-                    stroke="#1565c0"
-                    dot={false}
-                    strokeWidth={2}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </>
-      )}
-
-      <div className="rounded-xl bg-white p-5 shadow">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-700">
-            🤖 AI irrigation forecast
-          </h2>
-          <select
-            value={days}
-            onChange={(e) => {
-              setForecastLoading(true);
-              setDays(Number(e.target.value));
-            }}
-            className="rounded border border-gray-300 px-2 py-1 text-sm"
-          >
-            {[3, 5, 7].map((d) => (
-              <option key={d} value={d}>
-                Next {d} days
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {forecastLoading && (
-          <p className="text-gray-500">Calculating forecast...</p>
+        {offline && (
+          <Banner tone="warning" title="Sensors appear to be offline">
+            The last reading arrived {timeAgo(latest.timestamp, now)} ({fmtTime(latest.timestamp)}). Values below are
+            the last known readings.
+          </Banner>
         )}
 
-        {!forecastLoading && forecastError && (
-          <div className="rounded bg-amber-50 p-3 text-sm text-amber-800">
-            {forecastError}
+        {readings === null && !readingsError && (
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-5" aria-busy="true">
+            {[0, 1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-36" />)}
           </div>
         )}
 
-        {!forecastLoading && forecast && (
+        {readings && readings.length === 0 && (
+          <EmptyState
+            icon="activity"
+            title="No sensor readings yet"
+            text={`The sensor simulator must be started for this field (Field ID ${field.id}). Once it posts its first reading, live values appear here automatically.`}
+          />
+        )}
+
+        {latest && (
           <>
-            <div className="h-56">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={forecast.forecast}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="target_date" tick={{ fontSize: 11 }} />
-                  <YAxis
-                    tick={{ fontSize: 11 }}
-                    label={{
-                      value: "mm/day",
-                      angle: -90,
-                      position: "insideLeft",
-                      fontSize: 11,
-                    }}
-                  />
-                  <Tooltip />
-                  <Bar
-                    dataKey="predicted_water_mm"
-                    name="Water needed (mm)"
-                    fill="#1565c0"
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <section aria-label="Live readings">
+              <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+                <div className="col-span-2 lg:col-span-2">
+                  <MoistureCard moisture={latest.soil_moisture} soil={field.soil_type} status={status} />
+                </div>
+                <MetricCard icon="thermometer" label="Temperature" value={latest.temperature} unit="°C" accent="bg-orange-50 text-orange-700" />
+                <MetricCard icon="humidity" label="Humidity" value={latest.humidity} unit="%" accent="bg-sky-50 text-sky-700" />
+                <div className="col-span-2 grid grid-cols-2 gap-4 lg:col-span-1 lg:grid-cols-1">
+                  <MetricCard icon="cloudRain" label="Rainfall" value={latest.rainfall} unit="mm" accent="bg-sky-50 text-sky-700" />
+                  <MetricCard icon="wind" label="Wind speed" value={fmtNum(latest.wind_speed, 1)} unit="km/h" accent="bg-sage-100 text-ink-soft" />
+                </div>
+              </div>
+              <p className="mt-3 flex items-center gap-1.5 text-xs text-ink-mute">
+                <Icon name="refresh" size={12} />
+                Latest reading {fmtTime(latest.timestamp)} · refreshes every 5 seconds
+              </p>
+            </section>
 
-            <div className="mt-4 overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b text-xs uppercase text-gray-400">
-                  <tr>
-                    <th className="py-2">Date</th>
-                    <th>Growth stage</th>
-                    <th>Kc</th>
-                    <th>Water (mm)</th>
-                    <th>Total (liters)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {forecast.forecast.map((d) => (
-                    <tr key={d.target_date}>
-                      <td className="py-2">{d.target_date}</td>
-                      <td>{cap(d.growth_stage)}</td>
-                      <td>{d.kc}</td>
-                      <td className="font-medium">{d.predicted_water_mm}</td>
-                      <td>{d.total_liters.toLocaleString("en-IN")}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <p className="mt-3 text-xs text-gray-400">
-              Model: {forecast.model_name} · based on {forecast.based_on_days}{" "}
-              days of sensor data · {forecast.assumptions}
-            </p>
+            <ReadingCharts data={chartData} soil={field.soil_type} />
           </>
         )}
+
+        <ForecastPanel fieldId={fieldId} />
       </div>
-    </div>
-  )
+    </>
+  );
 }

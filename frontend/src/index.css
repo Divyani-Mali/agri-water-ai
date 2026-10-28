@@ -1,1 +1,47 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --color-forest-50: #f1f6f2;
+  --color-forest-100: #dfeae1;
+  --color-forest-200: #bfd5c4;
+  --color-forest-300: #96b89e;
+  --color-forest-400: #6a9a76;
+  --color-forest-500: #467d55;
+  --color-forest-600: #336544;
+  --color-forest-700: #285237;
+  --color-forest-800: #1f412d;
+  --color-forest-900: #173222;
+  --color-sage-50: #f6f7f4;
+  --color-sage-100: #eceee8;
+  --color-sage-200: #dde1d6;
+  --color-sage-300: #c3c9b9;
+  --color-ink: #1f2622;
+  --color-ink-soft: #55605a;
+  --color-ink-mute: #7d877f;
+}
+
+html, body, #root { min-height: 100%; }
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--color-sage-50);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-forest-500);
+  outline-offset: 2px;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.toast-in { animation: toast-in 0.18s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
