@@ -7,3 +7,25 @@ node_modules/
 dist/
 *.joblib
 backend/ml/data/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Python virtual environments and caches
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+
+# Frontend dependencies and build output
+node_modules/
+dist/
+
+# Local databases and model artifacts
+*.db
+*.sqlite
+*.sqlite3
+*.joblib
