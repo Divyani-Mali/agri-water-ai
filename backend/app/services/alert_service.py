@@ -1,10 +1,13 @@
-"""Rule-based alert engine: dry soil, heat stress, heavy rain, offline sensors."""
+"""Rule-based alert engine: dry soil, heat stress, heavy rain, offline sensors.
+Each alert stores its numbers (params) so it can be shown in the user's language."""
+import json
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.db.database import SessionLocal
+from app.i18n import render_alert
 from app.models.models import Alert, SensorReading
 from app.models.models import Field as FieldModel
 from ml.agronomy import SOILS
@@ -23,15 +26,7 @@ def utc_now() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
-def _ago(minutes: int) -> str:
-    if minutes < 120:
-        return f"{minutes} minutes"
-    if minutes < 2880:
-        return f"{minutes // 60} hours"
-    return f"{minutes // 1440} days"
-
-
-def _create(db: Session, field_id: int, alert_type: str, severity: str, message: str):
+def _create(db: Session, field_id: int, alert_type: str, severity: str, params: dict):
     """Create an alert unless an equal or more severe one was raised recently."""
     since = utc_now() - timedelta(hours=COOLDOWN_HOURS[alert_type])
     recent = (
@@ -46,8 +41,13 @@ def _create(db: Session, field_id: int, alert_type: str, severity: str, message:
     if any(RANK.get(s, 0) >= RANK[severity] for (s,) in recent):
         return None
 
+    message = render_alert(alert_type, severity, params, "en") or alert_type
     alert = Alert(
-        field_id=field_id, alert_type=alert_type, severity=severity, message=message
+        field_id=field_id,
+        alert_type=alert_type,
+        severity=severity,
+        message=message,
+        params=json.dumps(params),
     )
     db.add(alert)
     db.commit()
@@ -68,34 +68,29 @@ def evaluate_reading(db: Session, field: FieldModel, reading: SensorReading) -> 
     if pct < 0.5:
         created.append(_create(
             db, field.id, "dry_soil", "critical",
-            f"Irrigation overdue in '{field.name}': soil moisture is {reading.soil_moisture:.1f}%, "
-            f"below the irrigation trigger.",
+            {"field": field.name, "moisture": reading.soil_moisture},
         ))
     elif pct < 0.7:
         created.append(_create(
             db, field.id, "dry_soil", "warning",
-            f"Soil in '{field.name}' is getting dry ({reading.soil_moisture:.1f}%). "
-            f"Irrigation will be needed soon.",
+            {"field": field.name, "moisture": reading.soil_moisture},
         ))
 
     if reading.temperature >= HEAT_CRITICAL:
         created.append(_create(
             db, field.id, "heat_stress", "critical",
-            f"Extreme heat in '{field.name}': {reading.temperature:.1f} C. "
-            f"High risk of crop heat stress.",
+            {"field": field.name, "temperature": reading.temperature},
         ))
     elif reading.temperature >= HEAT_WARNING:
         created.append(_create(
             db, field.id, "heat_stress", "warning",
-            f"High temperature in '{field.name}': {reading.temperature:.1f} C. "
-            f"Crops may need extra water.",
+            {"field": field.name, "temperature": reading.temperature},
         ))
 
     if reading.rainfall >= HEAVY_RAIN_MM:
         created.append(_create(
             db, field.id, "heavy_rain", "warning",
-            f"Heavy rain in '{field.name}' ({reading.rainfall:.1f} mm). "
-            f"Consider postponing irrigation.",
+            {"field": field.name, "rain": reading.rainfall},
         ))
 
     return [a for a in created if a is not None]
@@ -117,7 +112,7 @@ def check_offline(db: Session) -> int:
         minutes = int((now - last).total_seconds() // 60)
         alert = _create(
             db, field.id, "sensor_offline", "warning",
-            f"No sensor data from '{field.name}' for {_ago(minutes)}. Please check the sensors.",
+            {"field": field.name, "minutes": minutes},
         )
         if alert:
             count += 1

@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app import models  # noqa: F401  (registers tables)
 from app.core.config import settings
 from app.db.database import Base, engine, ensure_schema
-from app.routers import admin, alerts, auth, farms, forecast, readings
+from app.routers import chat, admin, alerts, auth, farms, forecast, readings
 from app.services.alert_service import run_offline_check
 
 Base.metadata.create_all(bind=engine)
@@ -52,6 +52,7 @@ app.include_router(readings.router)
 app.include_router(forecast.router)
 app.include_router(alerts.router)
 app.include_router(admin.router)
+app.include_router(chat.router)
 
 
 @app.get("/")

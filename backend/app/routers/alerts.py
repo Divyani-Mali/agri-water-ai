@@ -1,13 +1,21 @@
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user
 from app.db.database import get_db
+from app.i18n import LANGS, alert_message, normalize_lang
 from app.models.models import Alert, Farm, User
 from app.models.models import Field as FieldModel
 from app.schemas.alert import AlertOut
 
 router = APIRouter(prefix="/api/alerts", tags=["Alerts"])
+
+
+def pick_lang(user: User, override) -> str:
+    """?lang=hi overrides the user's saved language (unknown values are ignored)."""
+    return override if override in LANGS else normalize_lang(user.preferred_language)
 
 
 def visible_alerts(db: Session, user: User):
@@ -22,14 +30,16 @@ def visible_alerts(db: Session, user: User):
     return q
 
 
-def to_out(alert: Alert, field_name: str) -> AlertOut:
+def to_out(alert: Alert, field_name: str, lang: str) -> AlertOut:
     return AlertOut(
         id=alert.id,
         field_id=alert.field_id,
         field_name=field_name,
         alert_type=alert.alert_type or "general",
         severity=alert.severity,
-        message=alert.message,
+        message=alert_message(
+            alert.alert_type, alert.severity, alert.params, alert.message, lang
+        ),
         is_read=alert.is_read,
         created_at=alert.created_at,
     )
@@ -39,14 +49,16 @@ def to_out(alert: Alert, field_name: str) -> AlertOut:
 def list_alerts(
     unread_only: bool = False,
     limit: int = Query(50, ge=1, le=200),
+    lang: Optional[str] = None,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    chosen = pick_lang(user, lang)
     q = visible_alerts(db, user)
     if unread_only:
         q = q.filter(Alert.is_read.is_(False))
     rows = q.order_by(Alert.created_at.desc(), Alert.id.desc()).limit(limit).all()
-    return [to_out(a, name) for a, name in rows]
+    return [to_out(a, name, chosen) for a, name in rows]
 
 
 @router.get("/unread-count")
@@ -79,4 +91,4 @@ def mark_read(
     alert.is_read = True
     db.commit()
     db.refresh(alert)
-    return to_out(alert, name)
+    return to_out(alert, name, pick_lang(user, None))

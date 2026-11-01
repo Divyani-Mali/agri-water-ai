@@ -1,11 +1,16 @@
 from datetime import datetime
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+
+Language = Literal["en", "hi", "mr"]
 
 
 class UserCreate(BaseModel):
     email: EmailStr
     full_name: str = Field(min_length=2, max_length=100)
     password: str = Field(min_length=8, max_length=64)
+    preferred_language: Language = "en"
 
     @field_validator("password")
     @classmethod
@@ -13,6 +18,10 @@ class UserCreate(BaseModel):
         if not any(c.isalpha() for c in v) or not any(c.isdigit() for c in v):
             raise ValueError("Password must contain at least one letter and one number")
         return v
+
+
+class ProfileUpdate(BaseModel):
+    preferred_language: Language
 
 
 class UserOut(BaseModel):
@@ -23,6 +32,7 @@ class UserOut(BaseModel):
     full_name: str
     role: str
     is_active: bool
+    preferred_language: str = "en"
     created_at: datetime
 
 

@@ -1,1 +1,3 @@
-from app.models.models import User, Farm, Field, SensorReading, Forecast, Alert
+from app.models.models import (
+    User, Farm, Field, SensorReading, Forecast, Alert, IrrigationLog,
+)
