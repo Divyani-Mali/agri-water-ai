@@ -16,3 +16,7 @@ requests
 pytest
 httpx
 matplotlib
+# STT provider — only needed when STT_PROVIDER=openai_whisper
+openai
+# TTS provider — google-cloud-texttospeech only needed when TTS_PROVIDER=google
+google-cloud-texttospeech

@@ -53,3 +53,26 @@ def test_assumptions_are_translated_only_when_known():
     assert translate_assumptions(english, "hi") == ASSUMPTIONS[0]["hi"]
     assert translate_assumptions(english, "en") == english
     assert translate_assumptions("something else", "hi") == "something else"
+
+
+
+from app.i18n import speakable
+
+
+def test_speech_text_spells_out_symbols_and_units():
+    spoken = speakable("'North Plot': soil moisture 28.0% (Healthy), temperature 28.0 °C, rainfall 0.0 mm.", "en")
+    assert "percent" in spoken and "degrees Celsius" in spoken and "millimetres" in spoken
+    for symbol in ("%", "°", "(", ")", "'"):
+        assert symbol not in spoken
+
+
+def test_speech_text_reads_dates_and_lines_as_sentences():
+    spoken = speakable("Water need:\n2026-10-14: 1 mm\n2026-10-15: 2 mm", "en")
+    assert "14 October" in spoken and "15 October" in spoken and "\n" not in spoken
+    assert "14 अक्टूबर" in speakable("2026-10-14: 1 मिमी", "hi")
+    assert "14 ऑक्टोबर" in speakable("2026-10-14", "mr")
+
+
+def test_speech_text_leaves_bad_dates_and_unknown_languages_alone():
+    assert "2026-13-40" in speakable("date 2026-13-40", "en")
+    assert speakable("Hello 2026-10-14", "xx") == "Hello 14 October"

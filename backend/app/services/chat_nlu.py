@@ -102,14 +102,26 @@ def _has(text: str, tokens, words) -> bool:
 
 
 def pick_language(message: str, requested, user_language) -> str:
-    """Reply language: explicit request, else Devanagari text, else the user's setting."""
+    """Reply language: explicit request, else Devanagari script detection, else the user's setting.
+
+    Detection priority:
+    1. ``requested`` if it is one of the three supported codes.
+    2. If the message contains Devanagari, run Marathi-marker detection.
+       - If Marathi markers are found, return ``"mr"``.
+       - Otherwise return ``"hi"`` (Hindi is the default Devanagari language).
+       The user's saved preference is used as a tiebreaker only when no markers
+       are found and the preference is ``"hi"`` or ``"mr"``.
+    3. The user's saved ``user_language`` (if valid), else ``"en"``.
+    """
     if requested in ("en", "hi", "mr"):
         return requested
     if has_devanagari(message):
-        if user_language in ("hi", "mr"):
-            return user_language
         _, tokens = prepare(message)
-        return "mr" if MARATHI_MARKERS & set(tokens) else "hi"
+        if MARATHI_MARKERS & set(tokens):
+            return "mr"
+        # No unambiguous Marathi markers — honour the user's saved preference
+        # between hi/mr; default to hi for other Devanagari text.
+        return user_language if user_language in ("hi", "mr") else "hi"
     return user_language if user_language in ("en", "hi", "mr") else "en"
 
 

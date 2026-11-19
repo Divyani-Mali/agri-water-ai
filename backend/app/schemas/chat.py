@@ -16,9 +16,9 @@ class ChatRequest(BaseModel):
             raise ValueError("Message cannot be empty")
         return v
 
-
 class ChatResponse(BaseModel):
     reply: str
+    speech: str = ""
     lang: str
     intent: str
     source: Optional[str] = None

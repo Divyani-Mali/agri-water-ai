@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
-from app.i18n import SUGGESTIONS, UNIT_NAMES, alert_message, label, say
+from app.i18n import SUGGESTIONS, UNIT_NAMES, alert_message, label, say, speakable
 from app.models.models import Alert, Farm, IrrigationLog, SensorReading, User
 from app.models.models import Field as FieldModel
 from app.schemas.chat import ChatResponse
@@ -31,12 +31,12 @@ def _fmt(number: float) -> str:
 def _reply(lang, intent, text, source=None, suggestions=True) -> ChatResponse:
     return ChatResponse(
         reply=text,
+        speech=speakable(text, lang),
         lang=lang,
         intent=intent,
         source=source,
         suggestions=SUGGESTIONS[lang] if suggestions else [],
     )
-
 
 def _user_fields(db: Session, user: User):
     return (
@@ -243,8 +243,10 @@ def handle_message(db: Session, user: User, message: str, requested_lang=None) -
     field = nlu.match_field(text, fields)
     if field is None:
         names = ", ".join(f.name for f in fields)
+        question = say("ask_field", lang, fields=names)
         return ChatResponse(
-            reply=say("ask_field", lang, fields=names),
+            reply=question,
+            speech=speakable(question, lang),
             lang=lang,
             intent=intent,
             suggestions=[f.name for f in fields[:6]],
