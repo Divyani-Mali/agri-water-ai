@@ -8,6 +8,7 @@ from app import models  # noqa: F401  (registers tables)
 from app.core.config import settings
 from app.db.database import Base, engine, ensure_schema
 from app.routers import chat, admin, alerts, auth, farms, forecast, readings
+from app.services import audio_store
 from app.services.alert_service import run_offline_check
 
 Base.metadata.create_all(bind=engine)
@@ -24,11 +25,25 @@ async def offline_monitor():
             print(f"[offline monitor] error: {exc}")
 
 
+async def audio_cleanup():
+    """Background job: every minute, evict expired TTS audio from the in-memory store."""
+    while True:
+        await asyncio.sleep(60)
+        try:
+            evicted = audio_store.evict(settings.AUDIO_RETENTION_MINUTES)
+            if evicted:
+                print(f"[audio cleanup] evicted {evicted} expired TTS audio entries")
+        except Exception as exc:
+            print(f"[audio cleanup] error: {exc}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    task = asyncio.create_task(offline_monitor())
+    task_offline = asyncio.create_task(offline_monitor())
+    task_audio = asyncio.create_task(audio_cleanup())
     yield
-    task.cancel()
+    task_offline.cancel()
+    task_audio.cancel()
 
 
 app = FastAPI(title=settings.APP_NAME, version="1.0.0", lifespan=lifespan)

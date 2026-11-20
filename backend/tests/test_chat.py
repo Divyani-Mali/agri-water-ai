@@ -253,3 +253,22 @@ def test_chat_needs_login_and_valid_input(client):
     assert client.post("/api/chat", json={"message": "   "}, headers=h).status_code == 422
     assert client.post("/api/chat", json={"message": "x" * 501}, headers=h).status_code == 422
     assert client.post("/api/chat", json={"message": "hi", "lang": "fr"}, headers=h).status_code == 422
+
+
+
+def test_replies_include_text_meant_for_speech(client):
+    register(client, "admin@test.com")
+    h = register(client, "a@test.com")
+    seed_field("a@test.com", moisture=28.0)
+    body = ask(client, h, "What is my soil moisture?")
+    assert "percent" in body["speech"] and "%" not in body["speech"]
+    assert "'" not in body["speech"]
+
+
+def test_which_field_question_has_speech_too(client):
+    register(client, "admin@test.com")
+    h = register(client, "a@test.com")
+    seed_field("a@test.com", "North Plot")
+    seed_field("a@test.com", "South Plot")
+    body = ask(client, h, "What is my soil moisture?")
+    assert "North Plot" in body["speech"] and "South Plot" in body["speech"]

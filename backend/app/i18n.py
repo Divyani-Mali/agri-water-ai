@@ -1,3 +1,6 @@
+import json
+import re
+
 """Translations (English, Hindi, Marathi) for alerts, labels and the assistant's replies.
 
 Anything shown to a farmer that comes from the backend is translated here.
@@ -334,5 +337,54 @@ SUGGESTIONS = {
 
 
 def say(key: str, lang: str, **params) -> str:
-    templates = BOT[key]
+    templates = BOT.get(key)
+    if not templates:
+        # Unknown key — return the key itself as a last-resort fallback rather
+        # than raising KeyError, which would surface as an unhandled 500.
+        return key
     return (templates.get(lang) or templates["en"]).format(**params)
+
+
+
+
+# ------------------------------------------------------------------ speech (text to speech)
+MONTHS = {
+    "en": ["January", "February", "March", "April", "May", "June", "July",
+           "August", "September", "October", "November", "December"],
+    "hi": ["जनवरी", "फ़रवरी", "मार्च", "अप्रैल", "मई", "जून", "जुलाई",
+           "अगस्त", "सितंबर", "अक्टूबर", "नवंबर", "दिसंबर"],
+    "mr": ["जानेवारी", "फेब्रुवारी", "मार्च", "एप्रिल", "मे", "जून", "जुलै",
+           "ऑगस्ट", "सप्टेंबर", "ऑक्टोबर", "नोव्हेंबर", "डिसेंबर"],
+}
+
+SPOKEN_SYMBOLS = {
+    "en": [("°C", " degrees Celsius"), ("%", " percent"), (" mm", " millimetres"), ("=", " equals")],
+    "hi": [("°C", " डिग्री सेल्सियस"), ("%", " प्रतिशत"), (" मिमी", " मिलीमीटर"), ("=", " बराबर")],
+    "mr": [("°C", " अंश सेल्सिअस"), ("%", " टक्के"), (" मिमी", " मिलिमीटर"), ("=", " बरोबर")],
+}
+
+
+def _spoken_date(match, lang: str) -> str:
+    year, month, day = (int(g) for g in match.groups())
+    if 1 <= month <= 12:
+        return f"{day} {MONTHS[lang][month - 1]}"
+    return match.group(0)
+
+
+def speakable(text: str, lang: str) -> str:
+    """A version of a reply that a text-to-speech voice reads well:
+    symbols and units spelled out, dates in words, no quotes, bullets or line breaks."""
+    lang = lang if lang in LANGS else "en"
+    out = re.sub(r"(\d{4})-(\d{2})-(\d{2})", lambda m: _spoken_date(m, lang), text)
+    for symbol, spoken in SPOKEN_SYMBOLS[lang]:
+        out = out.replace(symbol, spoken)
+    out = out.replace("(s)", "s").replace("'", "")
+    out = re.sub(r"^\s*-\s+", "", out, flags=re.MULTILINE)
+    out = re.sub(r"([.!?।:])\s*\n+\s*", r"\1 ", out)
+    out = re.sub(r"\s*\n+\s*", ". ", out)
+    out = re.sub(r"\s*[()]\s*", ", ", out)
+    out = re.sub(r"(,\s*){2,}", ", ", out)
+    out = re.sub(r",\s*([.!?।:])", r"\1", out)
+    out = re.sub(r"\.{2,}", ".", out)
+    out = re.sub(r"\s{2,}", " ", out)
+    return out.strip(" ,")
