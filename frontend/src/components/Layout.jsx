@@ -38,7 +38,7 @@ function NavItem({ to, icon, label, end, badge, collapsed, onNavigate }) {
   );
 }
 
-function SidebarContent({ collapsed, unread, onNavigate, onToggle }) {
+function SidebarContent({ collapsed, unread, schemeUnread, onNavigate, onToggle }) {
   const { user, logout, updateLanguage } = useAuth();
   const t = useTranslate();
   const [languageLoading, setLanguageLoading] = useState(false);
@@ -59,6 +59,7 @@ function SidebarContent({ collapsed, unread, onNavigate, onToggle }) {
       <nav aria-label={t("Main")} className="flex-1 space-y-1 px-3 py-4">
         <NavItem to="/" end icon="farm" label="Farms" collapsed={collapsed} onNavigate={onNavigate} />
         <NavItem to="/alerts" icon="bell" label="Alerts" badge={unread} collapsed={collapsed} onNavigate={onNavigate} />
+        <NavItem to="/schemes" icon="globe" label="Schemes" badge={schemeUnread} collapsed={collapsed} onNavigate={onNavigate} />
         {user.role === "admin" && (
           <NavItem to="/admin" icon="shield" label="Admin" collapsed={collapsed} onNavigate={onNavigate} />
         )}
@@ -181,6 +182,7 @@ export default function Layout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [unread, setUnread] = useState(0);
+  const [schemeUnread, setSchemeUnread] = useState(0);
   const location = useLocation();
 
   // unread alert badge: refresh every 15 seconds and whenever the Alerts page changes something
@@ -203,6 +205,24 @@ export default function Layout() {
     };
   }, []);
 
+  // scheme notification badge: refresh every 30 seconds
+  useEffect(() => {
+    let active = true;
+    const load = () =>
+      api
+        .get("/api/schemes/notifications/unread-count")
+        .then((res) => {
+          if (active) setSchemeUnread(res.data.count);
+        })
+        .catch(() => {});
+    load();
+    const timer = setInterval(load, 30000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, []);
+
   // scroll to top on navigation
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -216,7 +236,7 @@ export default function Layout() {
           collapsed ? "w-[76px]" : "w-64"
         }`}
       >
-        <SidebarContent collapsed={collapsed} unread={unread} onToggle={() => setCollapsed((c) => !c)} />
+        <SidebarContent collapsed={collapsed} unread={unread} schemeUnread={schemeUnread} onToggle={() => setCollapsed((c) => !c)} />
       </aside>
 
       {/* mobile top bar */}
@@ -247,7 +267,7 @@ export default function Layout() {
             >
               <Icon name="x" />
             </button>
-            <SidebarContent collapsed={false} unread={unread} onNavigate={() => setMobileOpen(false)} />
+            <SidebarContent collapsed={false} unread={unread} schemeUnread={schemeUnread} onNavigate={() => setMobileOpen(false)} />
           </div>
         </div>
       )}

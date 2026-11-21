@@ -6,13 +6,18 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app import models  # noqa: F401  (registers tables)
 from app.core.config import settings
-from app.db.database import Base, engine, ensure_schema
-from app.routers import chat, admin, alerts, auth, farms, forecast, readings
+from app.db.database import Base, SessionLocal, engine, ensure_schema
+from app.routers import chat, schemes, admin, alerts, auth, farms, forecast, readings
 from app.services import audio_store
 from app.services.alert_service import run_offline_check
+from app.services.scheme_service import seed_schemes
 
 Base.metadata.create_all(bind=engine)
 ensure_schema()
+
+# Seed government schemes on first run
+with SessionLocal() as _session:
+    seed_schemes(_session)
 
 
 async def offline_monitor():
@@ -68,6 +73,7 @@ app.include_router(forecast.router)
 app.include_router(alerts.router)
 app.include_router(admin.router)
 app.include_router(chat.router)
+app.include_router(schemes.router)
 
 
 @app.get("/")

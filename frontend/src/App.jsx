@@ -12,6 +12,7 @@ import ForgotPassword from './pages/ForgotPassword'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import ResetPassword from './pages/ResetPassword'
+import Schemes from './pages/Schemes'
 
 export default function App() {
   return (
@@ -28,6 +29,7 @@ export default function App() {
           <Route path="/fields" element={<Fields />} />
           <Route path="/fields/:fieldId" element={<FieldDetail />} />
           <Route path="/alerts" element={<Alerts />} />
+          <Route path="/schemes" element={<Schemes />} />
           <Route element={<AdminRoute />}>
             <Route path="/admin" element={<Admin />} />
           </Route>

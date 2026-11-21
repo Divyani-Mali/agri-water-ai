@@ -124,3 +124,40 @@ class IrrigationLog(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     field = relationship("Field", back_populates="irrigation_logs")
+
+
+# ------------------------------------------------------------------ Government Schemes
+class GovernmentScheme(Base):
+    __tablename__ = "government_schemes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    description = Column(Text, nullable=False)
+    benefits = Column(Text, nullable=False)
+    eligibility = Column(Text, nullable=False)
+    documents_required = Column(Text, nullable=False)
+    application_process = Column(Text, nullable=False)
+    application_url = Column(String, nullable=True)
+    source_url = Column(String, nullable=False)
+    last_verified = Column(Date, nullable=False)
+    deadline = Column(Date, nullable=True)
+    level = Column(String, nullable=False)  # central / maharashtra
+    category = Column(String, nullable=True)  # income_support / insurance / credit / irrigation / mechanization / organic / market / pension
+    applicable_crops = Column(Text, nullable=True)  # comma-separated or None for all
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
+
+class SchemeNotification(Base):
+    __tablename__ = "scheme_notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    scheme_id = Column(Integer, ForeignKey("government_schemes.id", ondelete="CASCADE"), nullable=False, index=True)
+    notification_type = Column(String, nullable=False)  # new_scheme / deadline_approaching / scheme_updated
+    message = Column(Text, nullable=False)
+    is_read = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    scheme = relationship("GovernmentScheme")
