@@ -1,9 +1,11 @@
 import { useEffect, useId } from "react";
 import Icon from "./Icon";
 import Button from "./Button";
+import { useTranslate } from "../../context/authContext";
 
 export default function Modal({ open, title, onClose, children, busy = false }) {
   const titleId = useId();
+  const t = useTranslate();
 
   useEffect(() => {
     if (!open) return;
@@ -30,11 +32,11 @@ export default function Modal({ open, title, onClose, children, busy = false }) 
         className="toast-in relative max-h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-white p-6 shadow-xl sm:max-w-lg sm:rounded-2xl"
       >
         <div className="mb-4 flex items-start justify-between gap-4">
-          <h2 id={titleId} className="text-lg font-semibold text-ink">{title}</h2>
+          <h2 id={titleId} className="text-lg font-semibold text-ink">{t(title)}</h2>
           <button
             onClick={onClose}
             disabled={busy}
-            aria-label="Close dialog"
+            aria-label={t("Close dialog")}
             className="rounded-md p-1 text-ink-mute hover:bg-sage-100 disabled:opacity-50"
           >
             <Icon name="x" />
@@ -47,13 +49,14 @@ export default function Modal({ open, title, onClose, children, busy = false }) 
 }
 
 export function ConfirmDialog({ open, title, message, confirmLabel = "Confirm", danger = false, busy = false, onConfirm, onClose }) {
+  const t = useTranslate();
   return (
     <Modal open={open} title={title} onClose={onClose} busy={busy}>
-      <p className="text-sm text-ink-soft">{message}</p>
+      <p className="text-sm text-ink-soft">{t(message)}</p>
       <div className="mt-6 flex justify-end gap-2">
-        <Button variant="secondary" onClick={onClose} disabled={busy}>Cancel</Button>
+        <Button variant="secondary" onClick={onClose} disabled={busy}>{t("Cancel")}</Button>
         <Button variant={danger ? "danger" : "primary"} onClick={onConfirm} loading={busy}>
-          {confirmLabel}
+          {t(confirmLabel)}
         </Button>
       </div>
     </Modal>

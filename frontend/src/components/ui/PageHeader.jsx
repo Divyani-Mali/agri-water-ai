@@ -1,7 +1,9 @@
 import { Link } from "react-router-dom";
 import Icon from "./Icon";
+import { useTranslate } from "../../context/authContext";
 
 export default function PageHeader({ title, subtitle, crumbs = [], action, meta }) {
+  const t = useTranslate();
   return (
     <header className="mb-6">
       {crumbs.length > 0 && (
@@ -10,9 +12,9 @@ export default function PageHeader({ title, subtitle, crumbs = [], action, meta 
             <span key={i} className="flex items-center gap-1">
               {i > 0 && <Icon name="chevronRight" size={12} />}
               {c.to ? (
-                <Link to={c.to} className="hover:text-forest-700 hover:underline">{c.label}</Link>
+                <Link to={c.to} className="hover:text-forest-700 hover:underline">{t(c.label)}</Link>
               ) : (
-                <span aria-current="page" className="text-ink-soft">{c.label}</span>
+                <span aria-current="page" className="text-ink-soft">{t(c.label)}</span>
               )}
             </span>
           ))}
@@ -20,8 +22,8 @@ export default function PageHeader({ title, subtitle, crumbs = [], action, meta 
       )}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight text-ink">{title}</h1>
-          {subtitle && <p className="mt-1 text-sm text-ink-soft">{subtitle}</p>}
+          <h1 className="text-2xl font-semibold tracking-tight text-ink">{t(title)}</h1>
+          {subtitle && <p className="mt-1 text-sm text-ink-soft">{t(subtitle)}</p>}
           {meta}
         </div>
         {action}

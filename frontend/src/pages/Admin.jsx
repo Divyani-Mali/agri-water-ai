@@ -10,9 +10,11 @@ import { ErrorState, Skeleton } from "../components/ui/Feedback";
 import { ConfirmDialog } from "../components/ui/Modal";
 import { useToast } from "../components/ui/toastContext";
 import SummaryCard from "../components/SummaryCard";
+import { useTranslate } from "../context/authContext";
 
 export default function Admin() {
   const { user: me } = useAuth();
+  const t = useTranslate();
   const toast = useToast();
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState(null);
@@ -41,11 +43,14 @@ export default function Admin() {
     setPending({
       user: u,
       body: { is_active: !u.is_active },
-      title: u.is_active ? "Disable account?" : "Enable account?",
-      message: u.is_active
-        ? `${u.full_name} will no longer be able to log in or use the platform.`
-        : `${u.full_name} will be able to log in again.`,
-      label: u.is_active ? "Disable account" : "Enable account",
+      title: t(u.is_active ? "Disable account?" : "Enable account?"),
+      message: t(
+        u.is_active
+          ? "{name} will no longer be able to log in or use the platform."
+          : "{name} will be able to log in again.",
+        { name: u.full_name },
+      ),
+      label: t(u.is_active ? "Disable account" : "Enable account"),
       danger: u.is_active,
     });
 
@@ -54,9 +59,14 @@ export default function Admin() {
     setPending({
       user: u,
       body: { role: next },
-      title: `Make ${cap(next)}?`,
-      message: `${u.full_name} will become ${next === "admin" ? "an admin with full access to user management" : "a farmer without admin access"}.`,
-      label: `Make ${cap(next)}`,
+      title: t("Make {role}?", { role: t(cap(next)) }),
+      message: t(
+        next === "admin"
+          ? "{name} will become an admin with full access to user management."
+          : "{name} will become a farmer without admin access.",
+        { name: u.full_name },
+      ),
+      label: t("Make {role}", { role: t(cap(next)) }),
       danger: next === "farmer",
     });
   };
@@ -65,7 +75,7 @@ export default function Admin() {
     setSaving(true);
     try {
       await api.patch(`/api/admin/users/${pending.user.id}`, pending.body);
-      toast.success(`${pending.user.full_name} updated`);
+      toast.success(t("{name} updated", { name: pending.user.full_name }));
       setPending(null);
       await load();
     } catch (err) {
@@ -107,17 +117,17 @@ export default function Admin() {
           </div>
 
           <Card>
-            <CardHeader title={`Users${users ? ` (${fmtNum(users.length)})` : ""}`} subtitle="Disable accounts or change roles. You cannot change your own account." />
+            <CardHeader title={users ? t("Users ({count})", { count: fmtNum(users.length) }) : "Users"} subtitle="Disable accounts or change roles. You cannot change your own account." />
             <div className="overflow-x-auto">
               <table className="w-full min-w-[820px] text-left text-sm">
                 <thead className="bg-sage-50 text-xs uppercase tracking-wide text-ink-mute">
                   <tr>
-                    <th className="px-5 py-2.5 font-medium">Name</th>
-                    <th className="px-3 py-2.5 font-medium">Email</th>
-                    <th className="px-3 py-2.5 font-medium">Role</th>
-                    <th className="px-3 py-2.5 font-medium">Status</th>
-                    <th className="px-3 py-2.5 font-medium">Joined</th>
-                    <th className="px-5 py-2.5 text-right font-medium">Actions</th>
+                    <th className="px-5 py-2.5 font-medium">{t("Name")}</th>
+                    <th className="px-3 py-2.5 font-medium">{t("Email")}</th>
+                    <th className="px-3 py-2.5 font-medium">{t("Role")}</th>
+                    <th className="px-3 py-2.5 font-medium">{t("Status")}</th>
+                    <th className="px-3 py-2.5 font-medium">{t("Joined")}</th>
+                    <th className="px-5 py-2.5 text-right font-medium">{t("Actions")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-sage-100">
@@ -132,7 +142,7 @@ export default function Admin() {
                     return (
                       <tr key={u.id} className="hover:bg-sage-50">
                         <td className="px-5 py-3 font-medium text-ink">
-                          {u.full_name} {isMe && <span className="ml-1 text-xs font-normal text-ink-mute">(you)</span>}
+                          {u.full_name} {isMe && <span className="ml-1 text-xs font-normal text-ink-mute">{t("(you)")}</span>}
                         </td>
                         <td className="px-3 py-3 text-ink-soft">{u.email}</td>
                         <td className="px-3 py-3"><Badge tone={u.role === "admin" ? "blue" : "gray"}>{cap(u.role)}</Badge></td>
@@ -143,8 +153,8 @@ export default function Admin() {
                             <Button variant="secondary" size="sm" disabled={isMe} onClick={() => askDisable(u)} title={isMe ? "You cannot change your own account" : undefined}>
                               {u.is_active ? "Disable" : "Enable"}
                             </Button>
-                            <Button variant="secondary" size="sm" disabled={isMe} onClick={() => askRole(u)} title={isMe ? "You cannot change your own account" : undefined}>
-                              Make {u.role === "admin" ? "Farmer" : "Admin"}
+                            <Button variant="secondary" size="sm" disabled={isMe} onClick={() => askRole(u)} title={isMe ? t("You cannot change your own account") : undefined}>
+                              {t("Make {role}", { role: t(u.role === "admin" ? "Farmer" : "Admin") })}
                             </Button>
                           </div>
                         </td>

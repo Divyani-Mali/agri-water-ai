@@ -11,19 +11,22 @@ import { EmptyState, ErrorState, Skeleton } from "../components/ui/Feedback";
 import { ConfirmDialog } from "../components/ui/Modal";
 import { useToast } from "../components/ui/toastContext";
 import AddFieldModal from "../components/AddFieldModal";
+import { useTranslate } from "../context/authContext";
 
 function Fact({ icon, label, value }) {
+  const t = useTranslate();
   return (
     <div className="flex items-center gap-2 text-sm">
       <Icon name={icon} size={15} className="text-ink-mute" />
-      <span className="text-ink-mute">{label}</span>
-      <span className="ml-auto font-medium text-ink">{value}</span>
+      <span className="text-ink-mute">{t(label)}</span>
+      <span className="ml-auto font-medium text-ink">{typeof value === "string" ? t(value) : value}</span>
     </div>
   );
 }
 
 export default function FarmDetail() {
   const { farmId } = useParams();
+  const t = useTranslate();
   const toast = useToast();
   const [farm, setFarm] = useState(null);
   const [fields, setFields] = useState([]);
@@ -60,7 +63,7 @@ export default function FarmDetail() {
     setDeleting(true);
     try {
       await api.delete(`/api/fields/${toDelete.id}`);
-      toast.success(`Field "${toDelete.name}" deleted`);
+      toast.success(t('Field "{name}" deleted', { name: toDelete.name }));
       setToDelete(null);
       await load();
     } catch (err) {
@@ -74,7 +77,7 @@ export default function FarmDetail() {
     return (
       <>
         <PageHeader title="Farm" crumbs={[{ label: "Farms", to: "/" }, { label: "Not available" }]} />
-        <ErrorState message={error || "Farm not found"} onRetry={() => { setLoading(true); load(); }} />
+        <ErrorState message={error || t("Farm not found")} onRetry={() => { setLoading(true); load(); }} />
         <Link to="/" className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-forest-700 hover:underline">
           <Icon name="arrowLeft" size={15} /> Back to farms
         </Link>
@@ -96,7 +99,7 @@ export default function FarmDetail() {
         }
         action={
           <div className="flex gap-2">
-            <Button as={Link} to="/" variant="secondary" icon="arrowLeft">Back</Button>
+            <Button as={Link} to="/" variant="secondary" icon="arrowLeft">{t("Back")}</Button>
             <Button icon="plus" onClick={() => setShowAdd(true)} disabled={!farm}>Add field</Button>
           </div>
         }
@@ -124,7 +127,7 @@ export default function FarmDetail() {
         />
       ) : (
         <>
-          <h2 className="mb-3 text-sm font-semibold text-ink-soft">Fields ({fields.length})</h2>
+          <h2 className="mb-3 text-sm font-semibold text-ink-soft">{t("Fields ({count})", { count: fields.length })}</h2>
           <ul className="grid gap-4 md:grid-cols-2">
             {fields.map((f) => (
               <li key={f.id}>
@@ -132,19 +135,19 @@ export default function FarmDetail() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <h3 className="truncate text-base font-semibold text-ink">{f.name}</h3>
-                      <p className="text-xs text-ink-mute">Field ID: {f.id}</p>
+                      <p className="text-xs text-ink-mute">{t("Field ID: {id}", { id: f.id })}</p>
                     </div>
                     <Badge tone="green">{cap(f.crop_type)}</Badge>
                   </div>
                   <div className="mt-4 space-y-2.5">
                     <Fact icon="mountain" label="Soil" value={cap(f.soil_type)} />
-                    <Fact icon="ruler" label="Area" value={`${f.area_acres} acres`} />
+                    <Fact icon="ruler" label="Area" value={`${f.area_acres} ${t("acres")}`} />
                     <Fact icon="calendar" label="Planted" value={fmtDate(f.planting_date)} />
                   </div>
                   <div className="mt-5 flex items-center justify-between pt-1">
-                    <Button as={Link} to={`/fields/${f.id}`} icon="activity" size="sm">View live data</Button>
-                    <Button variant="dangerGhost" size="sm" icon="trash" onClick={() => setToDelete(f)} aria-label={`Delete field ${f.name}`}>
-                      Delete
+                    <Button as={Link} to={`/fields/${f.id}`} icon="activity" size="sm">{t("View live data")}</Button>
+                    <Button variant="dangerGhost" size="sm" icon="trash" onClick={() => setToDelete(f)} aria-label={`${t("Delete")} ${f.name}`}>
+                      {t("Delete")}
                     </Button>
                   </div>
                 </Card>
@@ -160,7 +163,7 @@ export default function FarmDetail() {
         onClose={() => setShowAdd(false)}
         onCreated={async (field) => {
           setShowAdd(false);
-          toast.success(`Field "${field.name}" added`);
+          toast.success(t('Field "{name}" added', { name: field.name }));
           await load();
         }}
       />
@@ -169,7 +172,7 @@ export default function FarmDetail() {
         danger
         busy={deleting}
         title="Delete field?"
-        message={toDelete && `"${toDelete.name}" and all of its sensor readings will be permanently deleted.`}
+        message={toDelete && t('"{name}" and all of its sensor readings will be permanently deleted.', { name: toDelete.name })}
         confirmLabel="Delete field"
         onConfirm={confirmDelete}
         onClose={() => setToDelete(null)}

@@ -72,6 +72,24 @@ py -3.12 -m venv venv
 venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 copy .env.example .env
+```
+
+In `backend/.env`, replace `SECRET_KEY` and `SENSOR_API_KEY` with different, randomly generated values of at least 32 characters. Generate a value with:
+
+```powershell
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+Run the command twice and use a different value for each setting. Then create the first administrator from the backend directory:
+
+```powershell
+python -m app.create_admin
+```
+
+Public registration creates farmer accounts only; administrator access is provisioned locally or granted by an existing administrator.
+
+```powershell
+python ..\simulator\generate_dataset.py
 python -m ml.train
 uvicorn app.main:app --reload
 ```
@@ -91,18 +109,25 @@ npm run dev
 
 Open http://localhost:5173.
 
-The very first account created becomes the admin user. If you want to test password reset locally without SMTP, enable `PASSWORD_RESET_DEV_MODE=true` in `backend/.env` and the API will return a reset link in its response.
+If you want to test password reset locally without SMTP, enable `PASSWORD_RESET_DEV_MODE=true` in `backend/.env` and the API will return a reset link in its response.
+
+### Chatbot voice
+
+The chatbot uses browser speech recognition and speech synthesis when the browser supports them. Browsers without built-in speech recognition use the backend voice provider instead. The development defaults (`STT_PROVIDER=mock` and `TTS_PROVIDER=mock`) return a sample transcript and silent audio; for real server-side voice, set `STT_PROVIDER=openai_whisper`, `TTS_PROVIDER=openai`, and configure `OPENAI_API_KEY` in `backend/.env`.
 
 ### 3) Sensor simulator
 
-In another terminal from the project root:
+In another terminal from the project root, set `SENSOR_API_KEY` in the shell to the same private value configured in `backend/.env`:
 
 ```powershell
 .\backend\venv\Scripts\Activate.ps1
-python simulator/run_simulator.py --email YOUR_EMAIL --password YOUR_PASSWORD --fields 1 --key change-this-sensor-key
+$env:SENSOR_API_KEY = "YOUR_SENSOR_API_KEY"
+python simulator/run_simulator.py --email YOUR_EMAIL --fields YOUR_FIELD_ID
 ```
 
-The simulator key must match `SENSOR_API_KEY` in `backend/.env`. If you change the key, update both places. Use `--backfill-days 0` on later runs to avoid duplicate sensor history.
+Replace `YOUR_FIELD_ID` with the ID shown on the field detail page (the URL ends in `/fields/{id}`). The simulator prompts for the account password and reads `SENSOR_API_KEY` from the process environment if `--key` is omitted. The account must own the field or be an administrator. Use `--backfill-days 0` on later runs to avoid duplicate sensor history.
+
+The live simulator uses Open-Meteo hourly weather and reference ET0 for each farm. It uses saved latitude/longitude when available; otherwise, it geocodes the farm's saved location name. The farm location or coordinates are sent to Open-Meteo, so this mode requires an internet connection. Crop growth and soil-moisture updates remain simulated locally. Backfill supports up to 92 days of available past weather.
 
 ## Run tests
 

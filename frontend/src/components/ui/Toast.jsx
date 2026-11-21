@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import Icon from "./Icon";
 import { ToastContext } from "./toastContext";
+import { useTranslate } from "../../context/authContext";
 
 const TONE = {
   success: { cls: "border-forest-200 text-forest-800", icon: "checkCircle" },
@@ -10,6 +11,7 @@ const TONE = {
 
 export default function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
+  const t = useTranslate();
 
   const remove = useCallback((id) => setToasts((t) => t.filter((x) => x.id !== id)), []);
   const push = useCallback(
@@ -34,11 +36,11 @@ export default function ToastProvider({ children }) {
     <ToastContext.Provider value={api}>
       {children}
       <div aria-live="polite" className="fixed bottom-4 right-4 z-[60] flex w-[calc(100%-2rem)] max-w-sm flex-col gap-2">
-        {toasts.map((t) => (
-          <div key={t.id} className={`toast-in flex items-start gap-3 rounded-lg border bg-white px-4 py-3 text-sm shadow-lg ${TONE[t.type].cls}`}>
-            <Icon name={TONE[t.type].icon} size={18} className="mt-0.5" />
-            <p className="flex-1">{t.message}</p>
-            <button onClick={() => remove(t.id)} aria-label="Dismiss notification" className="text-ink-mute hover:text-ink">
+        {toasts.map((toast) => (
+          <div key={toast.id} className={`toast-in flex items-start gap-3 rounded-lg border bg-white px-4 py-3 text-sm shadow-lg ${TONE[toast.type].cls}`}>
+            <Icon name={TONE[toast.type].icon} size={18} className="mt-0.5" />
+            <p className="flex-1">{t(toast.message)}</p>
+            <button onClick={() => remove(toast.id)} aria-label={t("Dismiss notification")} className="text-ink-mute hover:text-ink">
               <Icon name="x" size={14} />
             </button>
           </div>

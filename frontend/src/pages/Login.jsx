@@ -6,11 +6,13 @@ import AuthShell from "../components/AuthShell";
 import Button from "../components/ui/Button";
 import FormField from "../components/ui/FormField";
 import { Banner } from "../components/ui/Feedback";
+import { useTranslate } from "../context/authContext";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function Login() {
   const { user, login, restoreError } = useAuth();
+  const t = useTranslate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState({});
@@ -46,9 +48,9 @@ export default function Login() {
       subtitle="Log in to monitor your fields."
       footer={
         <>
-          New to Smart Irrigation AI?{" "}
+          {t("New to Smart Irrigation AI?")}{" "}
           <Link to="/register" className="font-medium text-forest-700 hover:underline">
-            Create an account
+            {t("Create an account")}
           </Link>
         </>
       }
@@ -56,7 +58,7 @@ export default function Login() {
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
         {restoreError && (
           <Banner tone="warning" title="Could not restore your saved session">
-            {restoreError} Your saved token was kept; you can retry by refreshing once the server is available.
+            {restoreError} {t("Your saved token was kept; you can retry by refreshing once the server is available.")}
           </Banner>
         )}
         {error && (
@@ -83,11 +85,11 @@ export default function Login() {
         />
         <div className="-mt-2 text-right">
           <Link to="/forgot-password" className="text-sm font-medium text-forest-700 hover:underline">
-            Forgot password?
+            {t("Forgot password?")}
           </Link>
         </div>
         <Button type="submit" loading={loading} className="w-full">
-          {loading ? "Logging in..." : "Log in"}
+          {t(loading ? "Logging in..." : "Log in")}
         </Button>
       </form>
     </AuthShell>

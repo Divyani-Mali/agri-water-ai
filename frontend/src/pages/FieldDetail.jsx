@@ -10,11 +10,15 @@ import { Banner, EmptyState, ErrorState, Skeleton } from "../components/ui/Feedb
 import MetricCard, { MoistureCard } from "../components/field/MetricCard";
 import ReadingCharts from "../components/field/ReadingCharts";
 import ForecastPanel from "../components/field/ForecastPanel";
+import IrrigationHistoryPanel from "../components/field/IrrigationHistoryPanel";
+import ModelInfoPanel from "../components/field/ModelInfoPanel";
+import { useTranslate } from "../context/authContext";
 
 const OFFLINE_AFTER_MINUTES = 10;
 const POLL_MS = 5000;
 
 export default function FieldDetail() {
+  const t = useTranslate();
   const { fieldId } = useParams();
   const [field, setField] = useState(null);
   const [farm, setFarm] = useState(null);
@@ -83,7 +87,7 @@ export default function FieldDetail() {
         <PageHeader title="Field" crumbs={[{ label: "Farms", to: "/" }, { label: "Not available" }]} />
         <ErrorState message={fieldError} onRetry={loadField} />
         <Link to="/" className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-forest-700 hover:underline">
-          <Icon name="arrowLeft" size={15} /> Back to farms
+          <Icon name="arrowLeft" size={15} /> {t("Back to farms")}
         </Link>
       </>
     );
@@ -106,12 +110,12 @@ export default function FieldDetail() {
   const offline = latest && ageMinutes > OFFLINE_AFTER_MINUTES;
   const status = latest ? moistureStatus(latest.soil_moisture, field.soil_type) : null;
 
-  let connection = <Badge tone="gray">Waiting for data</Badge>;
+  let connection = <Badge tone="gray">{t("Waiting for data")}</Badge>;
   if (latest) {
     connection = offline ? (
-      <Badge tone="red"><Icon name="wifiOff" size={12} /> Sensors offline</Badge>
+      <Badge tone="red"><Icon name="wifiOff" size={12} /> {t("Sensors offline")}</Badge>
     ) : (
-      <Badge tone="green"><Icon name="wifi" size={12} /> Sensors online</Badge>
+      <Badge tone="green"><Icon name="wifi" size={12} /> {t("Sensors online")}</Badge>
     );
   }
 
@@ -126,15 +130,15 @@ export default function FieldDetail() {
         ]}
         action={
           <Button as={Link} to={`/farms/${field.farm_id}`} variant="secondary" icon="arrowLeft">
-            Back to farm
+          {t("Back to farms")}
           </Button>
         }
         meta={
           <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
             <Badge tone="green">{cap(field.crop_type)}</Badge>
-            <Badge>{cap(field.soil_type)} soil</Badge>
-            <Badge>{field.area_acres} acres</Badge>
-            <Badge>Planted {fmtDate(field.planting_date)}</Badge>
+            <Badge>{t(cap(field.soil_type))} {t("soil")}</Badge>
+            <Badge>{field.area_acres} {t("acres")}</Badge>
+            <Badge>{t("Planted")} {fmtDate(field.planting_date)}</Badge>
             {connection}
           </div>
         }
@@ -145,8 +149,10 @@ export default function FieldDetail() {
 
         {offline && (
           <Banner tone="warning" title="Sensors appear to be offline">
-            The last reading arrived {timeAgo(latest.timestamp, now)} ({fmtTime(latest.timestamp)}). Values below are
-            the last known readings.
+            {t("The last reading arrived {ago} ({time}). Values below are the last known readings.", {
+              ago: timeAgo(latest.timestamp, now),
+              time: fmtTime(latest.timestamp),
+            })}
           </Banner>
         )}
 
@@ -160,7 +166,7 @@ export default function FieldDetail() {
           <EmptyState
             icon="activity"
             title="No sensor readings yet"
-            text={`The sensor simulator must be started for this field (Field ID ${field.id}). Once it posts its first reading, live values appear here automatically.`}
+            text={t("The sensor simulator must be started for this field (Field ID {id}). Once it posts its first reading, live values appear here automatically.", { id: field.id })}
           />
         )}
 
@@ -180,7 +186,7 @@ export default function FieldDetail() {
               </div>
               <p className="mt-3 flex items-center gap-1.5 text-xs text-ink-mute">
                 <Icon name="refresh" size={12} />
-                Latest reading {fmtTime(latest.timestamp)} · refreshes every 5 seconds
+                {t("Latest reading {time} · refreshes every 5 seconds", { time: fmtTime(latest.timestamp) })}
               </p>
             </section>
 
@@ -189,6 +195,8 @@ export default function FieldDetail() {
         )}
 
         <ForecastPanel fieldId={fieldId} />
+        <IrrigationHistoryPanel fieldId={fieldId} />
+        <ModelInfoPanel />
       </div>
     </>
   );

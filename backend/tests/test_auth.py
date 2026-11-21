@@ -1,8 +1,20 @@
 from urllib.parse import parse_qs, urlparse
 
-from app.core.config import settings
+import pytest
+from pydantic import ValidationError
+
+from app.core.config import Settings, settings
 
 USER = {"email": "a@test.com", "full_name": "Test User", "password": "Test1234"}
+
+
+def test_settings_reject_placeholder_security_secrets():
+    with pytest.raises(ValidationError):
+        Settings(
+            _env_file=None,
+            SECRET_KEY="dev-secret",
+            SENSOR_API_KEY="s" * 40,
+        )
 
 
 def register(client, data=USER):
@@ -13,14 +25,15 @@ def login(client, email="a@test.com", password="Test1234"):
     return client.post("/api/auth/login", data={"username": email, "password": password})
 
 
-def test_register_success_first_user_is_admin(client):
+def test_register_creates_farmer_even_for_first_account(client):
     r = register(client)
     assert r.status_code == 201
-    assert r.json()["role"] == "admin"
+    assert r.json()["role"] == "farmer"
 
 
-def test_second_user_is_farmer(client):
-    register(client)
+def test_public_registration_never_grants_admin_role(client):
+    first = register(client, {**USER, "role": "admin"})
+    assert first.json()["role"] == "farmer"
     r = register(client, {**USER, "email": "b@test.com"})
     assert r.json()["role"] == "farmer"
 

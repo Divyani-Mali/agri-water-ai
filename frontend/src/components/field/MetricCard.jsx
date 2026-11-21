@@ -2,15 +2,17 @@ import Card from "../ui/Card";
 import Icon from "../ui/Icon";
 import Badge from "../ui/Badge";
 import { SOIL_RANGE, irrigationTrigger } from "../../constants";
+import { useTranslate } from "../../context/authContext";
 
 export default function MetricCard({ icon, label, value, unit, accent = "text-forest-700 bg-forest-50", children }) {
+  const t = useTranslate();
   return (
     <Card className="p-4">
       <div className="flex items-center gap-2 text-xs font-medium text-ink-mute">
         <span className={`flex h-7 w-7 items-center justify-center rounded-md ${accent}`}>
           <Icon name={icon} size={15} />
         </span>
-        {label}
+        {t(label)}
       </div>
       <p className="mt-3 text-3xl font-semibold tracking-tight text-ink">
         {value}
@@ -23,6 +25,7 @@ export default function MetricCard({ icon, label, value, unit, accent = "text-fo
 
 // Soil moisture card: value, status badge and a gauge from wilting point to field capacity.
 export function MoistureCard({ moisture, soil, status }) {
+  const t = useTranslate();
   const { wp, fc } = SOIL_RANGE[soil] || SOIL_RANGE.loamy;
   const clamp = (v) => Math.min(100, Math.max(0, v));
   const pos = clamp(((moisture - wp) / (fc - wp)) * 100);
@@ -38,17 +41,17 @@ export function MoistureCard({ moisture, soil, status }) {
         <div
           className="relative h-2 rounded-full bg-sage-200"
           role="meter"
-          aria-label="Soil moisture between wilting point and field capacity"
+          aria-label={t("Soil moisture between wilting point and field capacity")}
           aria-valuemin={wp}
           aria-valuemax={fc}
           aria-valuenow={moisture}
         >
           <div className={`h-2 rounded-full transition-all duration-500 ${bar}`} style={{ width: `${pos}%` }} />
-          <div className="absolute -top-1 h-4 w-0.5 bg-ink/70" style={{ left: `${triggerPos}%` }} title="Irrigation trigger" />
+          <div className="absolute -top-1 h-4 w-0.5 bg-ink/70" style={{ left: `${triggerPos}%` }} title={t("Irrigation trigger")} />
         </div>
         <div className="mt-1.5 flex justify-between text-[11px] text-ink-mute">
-          <span>{wp}% wilting</span>
-          <span>{fc}% capacity</span>
+          <span>{wp}% {t("wilting")}</span>
+          <span>{fc}% {t("capacity")}</span>
         </div>
       </div>
     </MetricCard>

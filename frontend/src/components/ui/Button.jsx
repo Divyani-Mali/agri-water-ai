@@ -1,4 +1,5 @@
 import Icon from "./Icon";
+import { useTranslate } from "../../context/authContext";
 
 const VARIANTS = {
   primary: "bg-forest-700 text-white hover:bg-forest-800 shadow-sm",
@@ -10,11 +11,12 @@ const VARIANTS = {
 const SIZES = { sm: "px-3 py-1.5 text-xs", md: "px-4 py-2 text-sm" };
 
 export function Spinner({ className = "" }) {
+  const t = useTranslate();
   return (
     <span
       className={`inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent ${className}`}
       role="status"
-      aria-label="Loading"
+      aria-label={t("Loading")}
     />
   );
 }
@@ -30,6 +32,7 @@ export default function Button({
   as: Tag = "button",
   ...rest
 }) {
+  const t = useTranslate();
   const props = Tag === "button" ? { type: "button", disabled: disabled || loading } : {};
   return (
     <Tag
@@ -38,7 +41,7 @@ export default function Button({
       className={`inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${VARIANTS[variant]} ${SIZES[size]} ${className}`}
     >
       {loading ? <Spinner /> : icon && <Icon name={icon} size={size === "sm" ? 14 : 16} />}
-      {children}
+      {typeof children === "string" ? t(children) : children}
     </Tag>
   );
 }

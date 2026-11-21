@@ -1,3 +1,5 @@
+import { useTranslate } from "../../context/authContext";
+
 export default function Card({ className = "", children, as: Tag = "div", ...rest }) {
   return (
     <Tag
@@ -10,11 +12,12 @@ export default function Card({ className = "", children, as: Tag = "div", ...res
 }
 
 export function CardHeader({ title, subtitle, action }) {
+  const t = useTranslate();
   return (
     <div className="flex flex-wrap items-start justify-between gap-3 border-b border-sage-100 px-5 py-4">
       <div>
-        <h2 className="text-sm font-semibold text-ink">{title}</h2>
-        {subtitle && <p className="mt-0.5 text-xs text-ink-mute">{subtitle}</p>}
+        <h2 className="text-sm font-semibold text-ink">{t(title)}</h2>
+        {subtitle && <p className="mt-0.5 text-xs text-ink-mute">{t(subtitle)}</p>}
       </div>
       {action}
     </div>

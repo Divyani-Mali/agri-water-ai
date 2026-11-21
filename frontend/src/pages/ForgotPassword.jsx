@@ -5,8 +5,10 @@ import AuthShell from "../components/AuthShell";
 import Button from "../components/ui/Button";
 import FormField from "../components/ui/FormField";
 import { Banner } from "../components/ui/Feedback";
+import { useTranslate } from "../context/authContext";
 
 export default function ForgotPassword() {
+  const t = useTranslate();
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [resetUrl, setResetUrl] = useState("");
@@ -35,14 +37,14 @@ export default function ForgotPassword() {
     <AuthShell
       title="Forgot password?"
       subtitle="Enter the email address for your account and we’ll send a reset link."
-      footer={<>Remembered it? <Link to="/login" className="font-medium text-forest-700 hover:underline">Back to login</Link></>}
+      footer={<>{t("Remembered it?")} <Link to="/login" className="font-medium text-forest-700 hover:underline">{t("Back to login")}</Link></>}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        {error && <Banner tone="error" title="Could not request a reset">{error}</Banner>}
-        {message && <Banner tone="success" title="Reset request received">{message}</Banner>}
+        {error && <Banner tone="error" title="Could not request a reset">{t(error)}</Banner>}
+        {message && <Banner tone="success" title="Reset request received">{t(message)}</Banner>}
         {resetUrl && (
           <Banner tone="info" title="Local development reset link">
-            <a href={resetUrl} className="font-medium underline">Open password reset</a>
+            <a href={resetUrl} className="font-medium underline">{t("Open password reset")}</a>
           </Banner>
         )}
         <FormField
@@ -54,7 +56,7 @@ export default function ForgotPassword() {
           placeholder="you@example.com"
         />
         <Button type="submit" loading={loading} className="w-full">
-          {loading ? "Sending link..." : "Send reset link"}
+          {t(loading ? "Sending link..." : "Send reset link")}
         </Button>
       </form>
     </AuthShell>

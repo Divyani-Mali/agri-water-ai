@@ -4,10 +4,12 @@ import api, { errorMessage } from "../../api/client";
 import { cap, fmtDate, fmtNum } from "../../constants";
 import Card, { CardHeader } from "../ui/Card";
 import { Banner, ErrorState, Skeleton } from "../ui/Feedback";
+import { useTranslate } from "../../context/authContext";
 
 const AXIS = { fontSize: 11, fill: "#7d877f" };
 
 export default function ForecastPanel({ fieldId }) {
+  const t = useTranslate();
   const [days, setDays] = useState(3);
   const [state, setState] = useState({ status: "loading", data: null, message: "" });
   const [reloadKey, setReloadKey] = useState(0);
@@ -43,7 +45,7 @@ export default function ForecastPanel({ fieldId }) {
         title="Irrigation forecast"
         subtitle="Predicted daily water requirement for this field"
         action={
-          <div role="group" aria-label="Forecast length" className="inline-flex rounded-lg border border-sage-300 bg-white p-0.5">
+          <div role="group" aria-label={t("Forecast length")} className="inline-flex rounded-lg border border-sage-300 bg-white p-0.5">
             {[3, 5, 7].map((d) => (
               <button
                 key={d}
@@ -53,7 +55,7 @@ export default function ForecastPanel({ fieldId }) {
                   days === d ? "bg-forest-700 text-white" : "text-ink-soft hover:bg-sage-100"
                 }`}
               >
-                {d} days
+                {t("{days} days", { days: d })}
               </button>
             ))}
           </div>
@@ -70,15 +72,13 @@ export default function ForecastPanel({ fieldId }) {
         {status === "not-ready" && (
           <Banner tone="warning" title="Not enough sensor data for a forecast yet">
             <p>
-              {message} The model needs at least one full day of sensor readings for this field before it can predict
-              water needs.
+              {message} {t("The model needs at least one full day of sensor readings for this field before it can predict water needs.")}
             </p>
             <p className="mt-1">
-              Next step: keep the sensor simulator running for this field (it posts a reading regularly), or start it
-              with its history backfill option, then check again.
+              {t("Next step: keep the sensor simulator running for this field (it posts a reading regularly), or start it with its history backfill option, then check again.")}
             </p>
             <button onClick={() => setReloadKey((k) => k + 1)} className="mt-2 text-sm font-medium underline">
-              Check again
+              {t("Check again")}
             </button>
           </Banner>
         )}
@@ -86,7 +86,7 @@ export default function ForecastPanel({ fieldId }) {
         {status === "error" && <ErrorState message={message} onRetry={() => setReloadKey((k) => k + 1)} />}
 
         {status === "ok" && rows.length === 0 && (
-          <p className="py-8 text-center text-sm text-ink-mute">The backend returned no forecast days.</p>
+          <p className="py-8 text-center text-sm text-ink-mute">{t("The backend returned no forecast days.")}</p>
         )}
 
         {status === "ok" && rows.length > 0 && (
@@ -100,9 +100,9 @@ export default function ForecastPanel({ fieldId }) {
                   <Tooltip
                     cursor={{ fill: "#f1f6f2" }}
                     contentStyle={{ borderRadius: 8, border: "1px solid #dde1d6", fontSize: 12 }}
-                    formatter={(v) => [`${v} mm`, "Water requirement"]}
+                    formatter={(v) => [`${v} mm`, t("Water requirement")]}
                   />
-                  <Bar dataKey="predicted_water_mm" name="Water requirement (mm)" fill="#467d55" radius={[4, 4, 0, 0]} maxBarSize={56} />
+                  <Bar dataKey="predicted_water_mm" name={`${t("Water requirement")} (mm)`} fill="#467d55" radius={[4, 4, 0, 0]} maxBarSize={56} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -112,17 +112,17 @@ export default function ForecastPanel({ fieldId }) {
                 <thead className="bg-sage-50 text-xs uppercase tracking-wide text-ink-mute">
                   <tr>
                     <th className="px-4 py-2.5 font-medium">Date</th>
-                    <th className="px-4 py-2.5 font-medium">Growth stage</th>
-                    <th className="px-4 py-2.5 text-right font-medium">Crop coeff. (Kc)</th>
-                    <th className="px-4 py-2.5 text-right font-medium">Water (mm)</th>
-                    <th className="px-4 py-2.5 text-right font-medium">Total (litres)</th>
+                    <th className="px-4 py-2.5 font-medium">{t("Growth stage")}</th>
+                    <th className="px-4 py-2.5 text-right font-medium">{t("Crop coeff. (Kc)")}</th>
+                    <th className="px-4 py-2.5 text-right font-medium">{t("Water (mm)")}</th>
+                    <th className="px-4 py-2.5 text-right font-medium">{t("Total (litres)")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-sage-100">
                   {rows.map((r) => (
                     <tr key={r.target_date} className="hover:bg-sage-50">
                       <td className="px-4 py-2.5 font-medium text-ink">{fmtDate(r.target_date)}</td>
-                      <td className="px-4 py-2.5 text-ink-soft">{cap(r.growth_stage)}</td>
+                      <td className="px-4 py-2.5 text-ink-soft">{r.growth_stage_label || cap(r.growth_stage)}</td>
                       <td className="px-4 py-2.5 text-right tabular-nums">{r.kc}</td>
                       <td className="px-4 py-2.5 text-right font-medium tabular-nums">{r.predicted_water_mm}</td>
                       <td className="px-4 py-2.5 text-right tabular-nums">{fmtNum(r.total_liters)}</td>
@@ -134,15 +134,15 @@ export default function ForecastPanel({ fieldId }) {
 
             <dl className="mt-4 space-y-1 rounded-lg bg-sage-50 p-4 text-xs text-ink-soft">
               <div className="flex flex-wrap gap-x-2">
-                <dt className="font-semibold text-ink">Model:</dt>
+                <dt className="font-semibold text-ink">{t("Model:")}</dt>
                 <dd>{data.model_name}</dd>
               </div>
               <div className="flex flex-wrap gap-x-2">
-                <dt className="font-semibold text-ink">Based on:</dt>
-                <dd>{data.based_on_days} day(s) of this field&apos;s sensor data</dd>
+                <dt className="font-semibold text-ink">{t("Based on:")}</dt>
+                <dd>{data.based_on_days} {t("day(s) of this field's sensor data")}</dd>
               </div>
               <div className="flex flex-wrap gap-x-2">
-                <dt className="font-semibold text-ink">Assumptions:</dt>
+                <dt className="font-semibold text-ink">{t("Assumptions:")}</dt>
                 <dd>{data.assumptions}</dd>
               </div>
             </dl>

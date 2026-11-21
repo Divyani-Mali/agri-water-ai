@@ -12,9 +12,11 @@ import { ConfirmDialog } from "../components/ui/Modal";
 import { useToast } from "../components/ui/toastContext";
 import AddFarmModal from "../components/AddFarmModal";
 import SummaryCard from "../components/SummaryCard";
+import { useTranslate } from "../context/authContext";
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const t = useTranslate();
   const toast = useToast();
   const [farms, setFarms] = useState([]);
   const [fieldCounts, setFieldCounts] = useState({});
@@ -56,7 +58,7 @@ export default function Dashboard() {
     setDeleting(true);
     try {
       await api.delete(`/api/farms/${toDelete.id}`);
-      toast.success(`Farm "${toDelete.name}" deleted`);
+      toast.success(t('Farm "{name}" deleted', { name: toDelete.name }));
       setToDelete(null);
       await load();
     } catch (err) {
@@ -72,7 +74,7 @@ export default function Dashboard() {
   return (
     <>
       <PageHeader
-        title={`Welcome back, ${firstName}`}
+        title={t("Welcome back, {name}", { name: firstName })}
         subtitle="Manage your farms and open a field to see live sensor data."
         action={
           <Button icon="plus" onClick={() => setShowAdd(true)}>
@@ -115,7 +117,7 @@ export default function Dashboard() {
               icon="sprout"
               title="No farms yet"
               text="Create your first farm, then add fields to start monitoring soil moisture and forecasting water needs."
-              action={<Button icon="plus" onClick={() => setShowAdd(true)}>Add your first farm</Button>}
+              action={<Button icon="plus" onClick={() => setShowAdd(true)}>{t("Add your first farm")}</Button>}
             />
           ) : (
             <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -132,20 +134,20 @@ export default function Dashboard() {
                       </div>
                       <button
                         onClick={() => setToDelete(farm)}
-                        aria-label={`Delete farm ${farm.name}`}
+                        aria-label={`${t("Delete farm")} ${farm.name}`}
                         className="rounded-md p-1.5 text-ink-mute hover:bg-red-50 hover:text-red-600"
                       >
                         <Icon name="trash" size={16} />
                       </button>
                     </div>
                     <p className="mt-4 text-xs text-ink-mute">
-                      {fieldCounts[farm.id] ?? 0} {fieldCounts[farm.id] === 1 ? "field" : "fields"}
+                      {fieldCounts[farm.id] ?? 0} {t(fieldCounts[farm.id] === 1 ? "field" : "fields")}
                     </p>
                     <Link
                       to={`/farms/${farm.id}`}
                       className="mt-auto inline-flex items-center gap-1.5 pt-4 text-sm font-medium text-forest-700 hover:text-forest-900"
                     >
-                      Open farm <Icon name="arrowRight" size={15} />
+                      {t("Open farm")} <Icon name="arrowRight" size={15} />
                     </Link>
                   </Card>
                 </li>
@@ -161,7 +163,7 @@ export default function Dashboard() {
         onClose={() => setShowAdd(false)}
         onCreated={async (farm) => {
           setShowAdd(false);
-          toast.success(`Farm "${farm.name}" created`);
+          toast.success(t('Farm "{name}" created', { name: farm.name }));
           await load();
         }}
       />
@@ -170,7 +172,7 @@ export default function Dashboard() {
         danger
         busy={deleting}
         title="Delete farm?"
-        message={toDelete && `"${toDelete.name}" and all of its fields and sensor data will be permanently deleted.`}
+        message={toDelete && t('{name} and all of its fields and sensor data will be permanently deleted.', { name: `"${toDelete.name}"` })}
         confirmLabel="Delete farm"
         onConfirm={confirmDelete}
         onClose={() => setToDelete(null)}

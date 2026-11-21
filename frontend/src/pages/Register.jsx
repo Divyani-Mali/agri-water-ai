@@ -6,6 +6,7 @@ import AuthShell from "../components/AuthShell";
 import Button from "../components/ui/Button";
 import FormField from "../components/ui/FormField";
 import { Banner } from "../components/ui/Feedback";
+import { useTranslate } from "../context/authContext";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -22,6 +23,7 @@ function validateRegistration({ name, email, password, confirm }) {
 
 export default function Register() {
   const { user, register } = useAuth();
+  const t = useTranslate();
   const [form, setForm] = useState({ name: "", email: "", password: "", confirm: "" });
   const [errors, setErrors] = useState({});
   const [error, setError] = useState("");
@@ -54,9 +56,9 @@ export default function Register() {
       subtitle="Start monitoring and forecasting irrigation needs."
       footer={
         <>
-          Already registered?{" "}
+          {t("Already registered?")}{" "}
           <Link to="/login" className="font-medium text-forest-700 hover:underline">
-            Log in
+            {t("Log in")}
           </Link>
         </>
       }
@@ -87,7 +89,7 @@ export default function Register() {
           error={errors.confirm}
         />
         <Button type="submit" loading={loading} className="w-full">
-          {loading ? "Creating account..." : "Create account"}
+          {t(loading ? "Creating account..." : "Create account")}
         </Button>
       </form>
     </AuthShell>

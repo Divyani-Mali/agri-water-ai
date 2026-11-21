@@ -4,7 +4,7 @@ Backend: http://127.0.0.1:8000 (start it with `uvicorn app.main:app --reload` in
 Interactive docs with every endpoint: http://127.0.0.1:8000/docs
 
 ## Login flow
-1. `POST /api/auth/register` with JSON `{ "email", "full_name", "password" }`. Password: at least 8 characters, with a letter and a number. The first registered user becomes admin.
+1. `POST /api/auth/register` with JSON `{ "email", "full_name", "password" }`. Password: at least 8 characters, with a letter and a number. Public registration always creates a farmer account. Create the first administrator locally with `python -m app.create_admin` from `backend`; the command refuses to run when an administrator already exists.
 2. `POST /api/auth/login` as **form-urlencoded** (not JSON) with `username` (the email) and `password`. Returns `{ "access_token", "token_type": "bearer" }`.
 3. Send `Authorization: Bearer <token>` on every other request.
 4. `GET /api/auth/me` returns the logged-in user (`id, email, full_name, role, is_active, created_at`). Role is `farmer` or `admin`.
@@ -25,7 +25,7 @@ Interactive docs with every endpoint: http://127.0.0.1:8000/docs
   - `crop_type`: wheat, rice, cotton, sugarcane, maize, soybean, tomato, onion
   - `soil_type`: sandy, loamy, clay
   - `area_acres` > 0, `planting_date` as YYYY-MM-DD and not in the future
-- Sensor readings (newest first): `GET /api/fields/{id}/readings?limit=100`, `GET /api/fields/{id}/readings/latest`. Device `POST /api/fields/{id}/readings` requests require the `X-API-Key` header to match `SENSOR_API_KEY` in `backend/.env` (the copied `.env.example` value is `change-this-sensor-key`).
+- Sensor readings (newest first): `GET /api/fields/{id}/readings?limit=100`, `GET /api/fields/{id}/readings/latest`. Device `POST /api/fields/{id}/readings` requests require both `X-API-Key` matching `SENSOR_API_KEY` and a valid `Authorization: Bearer <token>` for the field owner or an administrator. Generate distinct random `SECRET_KEY` and `SENSOR_API_KEY` values of at least 32 characters in `backend/.env`; the example values are placeholders and are rejected by the backend.
   - `id, field_id, timestamp, soil_moisture (%), temperature (C), humidity (%), rainfall (mm), wind_speed (km/h)`
   - Timestamps are UTC without a "Z". Add "Z" before parsing in JavaScript.
 - Forecast: `GET /api/fields/{id}/forecast?days=1..7` returns `forecast: [{ target_date, growth_stage, kc, predicted_water_mm, total_liters }]` plus `model_name`, `assumptions`. It returns 400 until the field has one full day of readings.

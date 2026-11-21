@@ -6,6 +6,7 @@ import joblib
 import pandas as pd
 from sqlalchemy.orm import Session
 
+from app.i18n import ASSUMPTIONS
 from app.models.models import Forecast, SensorReading
 from app.models.models import Field as FieldModel
 from ml.agronomy import crop_coefficient, day_in_season, growth_stage
@@ -178,10 +179,6 @@ def forecast_field(db: Session, field: FieldModel, days: int) -> dict:
         "model_name": bundle["model_name"],
         "based_on_days": int(len(history)),
         "current_soil_moisture": round(current_moisture, 2),
-        "assumptions": (
-            "Future weather is assumed equal to the average of the last 3 complete days, "
-            "with no rain. Soil moisture is held at the latest reading. "
-            "Connect a weather-forecast API for better accuracy."
-        ),
+        "assumptions": ASSUMPTIONS[0]["en"],
         "forecast": out_days,
     }

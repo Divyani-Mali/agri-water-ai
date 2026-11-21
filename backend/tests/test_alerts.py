@@ -18,7 +18,6 @@ def auth_headers(client, email):
 
 
 def setup(client):
-    auth_headers(client, "admin@test.com")  # first user = admin
     a = auth_headers(client, "a@test.com")
     b = auth_headers(client, "b@test.com")
     farm = client.post(
@@ -32,10 +31,14 @@ def setup(client):
     return a, b, field["id"]
 
 
-def reading(client, field_id, **over):
+def reading(client, field_id, owner_headers, **over):
     data = {"soil_moisture": 28, "temperature": 25, "humidity": 55, "rainfall": 0, "wind_speed": 5}
     data.update(over)
-    r = client.post(f"/api/fields/{field_id}/readings", json=data, headers=SENSOR)
+    r = client.post(
+        f"/api/fields/{field_id}/readings",
+        json=data,
+        headers={**SENSOR, **owner_headers},
+    )
     assert r.status_code == 201
     return r
 
@@ -46,13 +49,13 @@ def alerts(client, h, **params):
 
 def test_normal_reading_creates_no_alert(client):
     a, _, fid = setup(client)
-    reading(client, fid)
+    reading(client, fid, a)
     assert alerts(client, a) == []
 
 
 def test_dry_soil_warning(client):
     a, _, fid = setup(client)
-    reading(client, fid, soil_moisture=25)
+    reading(client, fid, a, soil_moisture=25)
     got = alerts(client, a)
     assert len(got) == 1
     assert got[0]["alert_type"] == "dry_soil"
@@ -61,7 +64,7 @@ def test_dry_soil_warning(client):
 
 def test_dry_soil_critical(client):
     a, _, fid = setup(client)
-    reading(client, fid, soil_moisture=12)
+    reading(client, fid, a, soil_moisture=12)
     got = alerts(client, a)
     assert got[0]["severity"] == "critical"
     assert got[0]["field_name"] == "Plot 1"
@@ -69,23 +72,23 @@ def test_dry_soil_critical(client):
 
 def test_cooldown_prevents_duplicates(client):
     a, _, fid = setup(client)
-    reading(client, fid, soil_moisture=12)
-    reading(client, fid, soil_moisture=12)
-    reading(client, fid, soil_moisture=25)  # less severe than the existing critical one
+    reading(client, fid, a, soil_moisture=12)
+    reading(client, fid, a, soil_moisture=12)
+    reading(client, fid, a, soil_moisture=25)  # less severe than the existing critical one
     assert len(alerts(client, a)) == 1
 
 
 def test_warning_escalates_to_critical(client):
     a, _, fid = setup(client)
-    reading(client, fid, soil_moisture=25)
-    reading(client, fid, soil_moisture=12)
+    reading(client, fid, a, soil_moisture=25)
+    reading(client, fid, a, soil_moisture=12)
     severities = sorted(x["severity"] for x in alerts(client, a))
     assert severities == ["critical", "warning"]
 
 
 def test_heat_alert(client):
     a, _, fid = setup(client)
-    reading(client, fid, temperature=43)
+    reading(client, fid, a, temperature=43)
     got = alerts(client, a)
     assert got[0]["alert_type"] == "heat_stress"
     assert got[0]["severity"] == "critical"
@@ -93,20 +96,20 @@ def test_heat_alert(client):
 
 def test_heavy_rain_alert(client):
     a, _, fid = setup(client)
-    reading(client, fid, rainfall=15)
+    reading(client, fid, a, rainfall=15)
     assert alerts(client, a)[0]["alert_type"] == "heavy_rain"
 
 
 def test_old_reading_does_not_alert(client):
     a, _, fid = setup(client)
     old = (datetime.now(timezone.utc) - timedelta(days=2)).replace(tzinfo=None).isoformat()
-    reading(client, fid, soil_moisture=12, timestamp=old)
+    reading(client, fid, a, soil_moisture=12, timestamp=old)
     assert alerts(client, a) == []
 
 
 def test_other_farmer_cannot_see_or_read_alert(client):
     a, b, fid = setup(client)
-    reading(client, fid, soil_moisture=12)
+    reading(client, fid, a, soil_moisture=12)
     alert_id = alerts(client, a)[0]["id"]
     assert alerts(client, b) == []
     assert client.post(f"/api/alerts/{alert_id}/read", headers=b).status_code == 404
@@ -114,7 +117,7 @@ def test_other_farmer_cannot_see_or_read_alert(client):
 
 def test_mark_read_and_unread_count(client):
     a, _, fid = setup(client)
-    reading(client, fid, soil_moisture=12)
+    reading(client, fid, a, soil_moisture=12)
     assert client.get("/api/alerts/unread-count", headers=a).json()["count"] == 1
 
     alert_id = alerts(client, a)[0]["id"]
@@ -126,7 +129,7 @@ def test_mark_read_and_unread_count(client):
 
 def test_mark_all_read(client):
     a, _, fid = setup(client)
-    reading(client, fid, soil_moisture=12, temperature=43)  # two alerts at once
+    reading(client, fid, a, soil_moisture=12, temperature=43)  # two alerts at once
     assert len(alerts(client, a)) == 2
     assert client.post("/api/alerts/read-all", headers=a).json()["marked"] == 2
     assert client.get("/api/alerts/unread-count", headers=a).json()["count"] == 0
@@ -140,7 +143,7 @@ def test_alerts_require_login(client):
 def test_offline_sensor_alert(client):
     a, _, fid = setup(client)
     old = (datetime.now(timezone.utc) - timedelta(hours=2)).replace(tzinfo=None).isoformat()
-    reading(client, fid, timestamp=old)
+    reading(client, fid, a, timestamp=old)
 
     db = next(app.dependency_overrides[get_db]())
     try:

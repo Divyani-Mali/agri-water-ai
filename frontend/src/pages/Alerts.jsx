@@ -9,6 +9,7 @@ import Icon from "../components/ui/Icon";
 import PageHeader from "../components/ui/PageHeader";
 import { EmptyState, ErrorState, Skeleton } from "../components/ui/Feedback";
 import { useToast } from "../components/ui/toastContext";
+import { useTranslate } from "../context/authContext";
 
 const SEVERITY = {
   critical: { label: "Critical", icon: "alertOctagon", tone: "red", bar: "bg-red-600", iconCls: "bg-red-50 text-red-700" },
@@ -26,6 +27,7 @@ const TYPE_LABEL = {
 const notifySidebar = () => window.dispatchEvent(new Event("alerts-changed"));
 
 function AlertItem({ alert, busy, onRead }) {
+  const t = useTranslate();
   const s = SEVERITY[alert.severity] || SEVERITY.info;
   return (
     <li>
@@ -37,9 +39,9 @@ function AlertItem({ alert, busy, onRead }) {
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge tone={s.tone}>{s.label}</Badge>
-              {TYPE_LABEL[alert.alert_type] && <span className="text-xs text-ink-mute">{TYPE_LABEL[alert.alert_type]}</span>}
-              {!alert.is_read && <span className="h-2 w-2 rounded-full bg-forest-600" aria-label="Unread" />}
+              <Badge tone={s.tone}>{t(s.label)}</Badge>
+              {TYPE_LABEL[alert.alert_type] && <span className="text-xs text-ink-mute">{t(TYPE_LABEL[alert.alert_type])}</span>}
+              {!alert.is_read && <span className="h-2 w-2 rounded-full bg-forest-600" aria-label={t("Unread")} />}
             </div>
             <p className={`mt-2 text-sm text-ink ${alert.is_read ? "" : "font-medium"}`}>{alert.message}</p>
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-mute">
@@ -64,6 +66,7 @@ function AlertItem({ alert, busy, onRead }) {
 
 export default function Alerts() {
   const toast = useToast();
+  const t = useTranslate();
   const [alerts, setAlerts] = useState([]);
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -99,7 +102,7 @@ export default function Alerts() {
     setBusyId(id);
     try {
       await api.post(`/api/alerts/${id}/read`);
-      toast.success("Alert marked as read");
+      toast.success(t("Alert marked as read"));
       await load();
       notifySidebar();
     } catch (err) {
@@ -113,7 +116,7 @@ export default function Alerts() {
     setMarkingAll(true);
     try {
       await api.post("/api/alerts/read-all");
-      toast.success("All alerts marked as read");
+      toast.success(t("All alerts marked as read"));
       await load();
       notifySidebar();
     } catch (err) {
@@ -143,7 +146,7 @@ export default function Alerts() {
                 }}
                 className="h-4 w-4 accent-forest-700"
               />
-              Unread only
+              {t("Unread only")}
             </label>
             <Button icon="checkCheck" onClick={markAll} loading={markingAll} disabled={unreadCount === 0}>
               Mark all as read

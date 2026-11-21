@@ -57,8 +57,13 @@ export const todayLocal = () => {
 export const toDate = (s) =>
   new Date(/[zZ]$|[+-]\d\d:?\d\d$/.test(s) ? s : s + "Z");
 
+const displayLocale = () => {
+  const language = typeof document === "undefined" ? "en" : document.documentElement.lang;
+  return language === "hi" || language === "mr" ? `${language}-IN` : "en-IN";
+};
+
 export const fmtTime = (s) =>
-  toDate(s).toLocaleString("en-IN", {
+  toDate(s).toLocaleString(displayLocale(), {
     day: "2-digit",
     month: "short",
     hour: "2-digit",
@@ -66,21 +71,37 @@ export const fmtTime = (s) =>
   });
 
 export const fmtDate = (s) =>
-  new Date(s + (s.length === 10 ? "T00:00:00" : "")).toLocaleDateString("en-IN", {
+  new Date(s + (s.length === 10 ? "T00:00:00" : "")).toLocaleDateString(displayLocale(), {
     day: "2-digit",
     month: "short",
     year: "numeric",
   });
 
 export const fmtClock = (s) =>
-  toDate(s).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+  toDate(s).toLocaleTimeString(displayLocale(), { hour: "2-digit", minute: "2-digit" });
 
 // "5 min ago" style label
 export const timeAgo = (s, now = Date.now()) => {
   const mins = Math.max(0, Math.round((now - toDate(s).getTime()) / 60000));
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins} min ago`;
+  const locale = displayLocale();
+  if (mins < 1) {
+    if (locale === "hi-IN") return "अभी";
+    if (locale === "mr-IN") return "आत्ताच";
+    return "just now";
+  }
+  if (mins < 60) {
+    if (locale === "hi-IN") return `${mins} मिनट पहले`;
+    if (locale === "mr-IN") return `${mins} मिनिटांपूर्वी`;
+    return `${mins} min ago`;
+  }
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs} hr ago`;
-  return `${Math.floor(hrs / 24)} d ago`;
+  if (hrs < 24) {
+    if (locale === "hi-IN") return `${hrs} घंटे पहले`;
+    if (locale === "mr-IN") return `${hrs} तासांपूर्वी`;
+    return `${hrs} hr ago`;
+  }
+  const days = Math.floor(hrs / 24);
+  if (locale === "hi-IN") return `${days} दिन पहले`;
+  if (locale === "mr-IN") return `${days} दिवसांपूर्वी`;
+  return `${days} d ago`;
 };

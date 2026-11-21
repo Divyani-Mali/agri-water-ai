@@ -30,10 +30,17 @@ def utc_now() -> datetime:
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(verify_sensor_key)],
 )
-def add_reading(field_id: int, data: ReadingCreate, db: Session = Depends(get_db)):
-    """Called by the sensor simulator (needs X-API-Key header)."""
+def add_reading(
+    field_id: int,
+    data: ReadingCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Accept sensor readings only from an authenticated field owner or admin."""
     field = db.query(FieldModel).filter(FieldModel.id == field_id).first()
     if field is None:
+        raise HTTPException(status_code=404, detail="Field not found")
+    if user.role != "admin" and field.farm.owner_id != user.id:
         raise HTTPException(status_code=404, detail="Field not found")
 
     ts = data.timestamp

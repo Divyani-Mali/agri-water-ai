@@ -5,8 +5,10 @@ import AuthShell from "../components/AuthShell";
 import Button from "../components/ui/Button";
 import FormField from "../components/ui/FormField";
 import { Banner } from "../components/ui/Feedback";
+import { useTranslate } from "../context/authContext";
 
 export default function ResetPassword() {
+  const t = useTranslate();
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token") || "";
   const [password, setPassword] = useState("");
@@ -44,19 +46,19 @@ export default function ResetPassword() {
     <AuthShell
       title={complete ? "Password updated" : "Set a new password"}
       subtitle={complete ? "Your password has been changed." : "Choose a new password for your account."}
-      footer={<Link to="/login" className="font-medium text-forest-700 hover:underline">Back to login</Link>}
+      footer={<Link to="/login" className="font-medium text-forest-700 hover:underline">{t("Back to login")}</Link>}
     >
       {complete ? (
         <Banner tone="success" title="Password reset complete">
-          You can now sign in with your new password.
+          {t("You can now sign in with your new password.")}
         </Banner>
       ) : !token ? (
         <Banner tone="error" title="Reset link is missing">
-          Request a new link from the <Link to="/forgot-password" className="font-medium underline">forgot password page</Link>.
+          {t("Request a new link from the")} <Link to="/forgot-password" className="font-medium underline">{t("forgot password page")}</Link>.
         </Banner>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && <Banner tone="error" title="Could not reset password">{error}</Banner>}
+          {error && <Banner tone="error" title="Could not reset password">{t(error)}</Banner>}
           <FormField
             label="New password"
             type="password"
@@ -75,7 +77,7 @@ export default function ResetPassword() {
             error={errors.confirmPassword}
           />
           <Button type="submit" loading={loading} className="w-full">
-            {loading ? "Updating password..." : "Update password"}
+            {t(loading ? "Updating password..." : "Update password")}
           </Button>
         </form>
       )}

@@ -93,15 +93,23 @@ def test_reading_requires_api_key(client):
     a, _ = setup_users(client)
     _, field = make_field(client, a)
     url = f"/api/fields/{field['id']}/readings"
-    assert client.post(url, json=READING).status_code == 422  # header missing
-    assert client.post(url, json=READING, headers={"X-API-Key": "wrong"}).status_code == 401
+    assert client.post(url, json=READING).status_code == 401  # login required
+    assert client.post(url, json=READING, headers=a).status_code == 422  # API key missing
+    assert client.post(
+        url, json=READING, headers={**a, "X-API-Key": "wrong"}
+    ).status_code == 401
+    assert client.post(url, json=READING, headers=SENSOR).status_code == 401
 
 
 def test_reading_out_of_range_rejected(client):
     a, _ = setup_users(client)
     _, field = make_field(client, a)
     bad = {**READING, "soil_moisture": 150}
-    r = client.post(f"/api/fields/{field['id']}/readings", json=bad, headers=SENSOR)
+    r = client.post(
+        f"/api/fields/{field['id']}/readings",
+        json=bad,
+        headers={**SENSOR, **a},
+    )
     assert r.status_code == 422
 
 
@@ -112,7 +120,7 @@ def test_add_and_fetch_readings(client):
 
     assert client.get(url + "/latest", headers=a).status_code == 404  # none yet
 
-    r = client.post(url, json=READING, headers=SENSOR)
+    r = client.post(url, json=READING, headers={**SENSOR, **a})
     assert r.status_code == 201
 
     latest = client.get(url + "/latest", headers=a)
@@ -122,5 +130,21 @@ def test_add_and_fetch_readings(client):
 
 
 def test_reading_unknown_field(client):
-    r = client.post("/api/fields/999/readings", json=READING, headers=SENSOR)
+    a, _ = setup_users(client)
+    r = client.post(
+        "/api/fields/999/readings",
+        json=READING,
+        headers={**SENSOR, **a},
+    )
+    assert r.status_code == 404
+
+
+def test_farmer_cannot_inject_readings_into_another_farm(client):
+    a, b = setup_users(client)
+    _, field = make_field(client, a)
+    r = client.post(
+        f"/api/fields/{field['id']}/readings",
+        json=READING,
+        headers={**SENSOR, **b},
+    )
     assert r.status_code == 404

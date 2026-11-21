@@ -1,8 +1,20 @@
+from app.db.database import get_db
+from app.main import app
+from app.models.models import User
+
+
 def auth_headers(client, email):
     client.post(
         "/api/auth/register",
         json={"email": email, "full_name": "Test User", "password": "Test1234"},
     )
+    if email == "admin@test.com":
+        db = next(app.dependency_overrides[get_db]())
+        try:
+            db.query(User).filter(User.email == email).update({"role": "admin"})
+            db.commit()
+        finally:
+            db.close()
     r = client.post("/api/auth/login", data={"username": email, "password": "Test1234"})
     return {"Authorization": f"Bearer {r.json()['access_token']}"}
 

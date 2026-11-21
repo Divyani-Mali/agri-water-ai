@@ -1,4 +1,5 @@
 import { useId } from "react";
+import { useTranslate } from "../../context/authContext";
 
 const inputClass = (invalid) =>
   `w-full rounded-lg border bg-white px-3 py-2 text-sm text-ink placeholder:text-ink-mute transition-colors disabled:bg-sage-100 disabled:text-ink-mute ${
@@ -8,6 +9,7 @@ const inputClass = (invalid) =>
 // Label + control + inline validation message. `children` is optional: pass a
 // <select> as children, otherwise a plain <input> is rendered.
 export default function FormField({ label, error, hint, children, ...inputProps }) {
+  const t = useTranslate();
   const id = useId();
   const errId = `${id}-err`;
   const common = {
@@ -18,17 +20,17 @@ export default function FormField({ label, error, hint, children, ...inputProps 
   return (
     <div>
       <label htmlFor={id} className="mb-1 block text-sm font-medium text-ink">
-        {label}
+        {t(label)}
       </label>
       {children ? (
         children(common, inputClass(Boolean(error)))
       ) : (
-        <input {...common} {...inputProps} className={inputClass(Boolean(error))} />
+        <input {...common} {...inputProps} placeholder={inputProps.placeholder ? t(inputProps.placeholder) : undefined} className={inputClass(Boolean(error))} />
       )}
-      {hint && !error && <p className="mt-1 text-xs text-ink-mute">{hint}</p>}
+      {hint && !error && <p className="mt-1 text-xs text-ink-mute">{t(hint)}</p>}
       {error && (
         <p id={errId} className="mt-1 text-xs font-medium text-red-600">
-          {error}
+          {t(error)}
         </p>
       )}
     </div>

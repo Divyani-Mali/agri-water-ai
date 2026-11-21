@@ -14,7 +14,14 @@ from app.core.security import create_access_token, hash_password, verify_passwor
 from app.core.config import settings
 from app.db.database import get_db
 from app.models.models import PasswordResetToken, User
-from app.schemas.user import PasswordResetConfirm, PasswordResetRequest, Token, UserCreate, UserOut
+from app.schemas.user import (
+    PasswordResetConfirm,
+    PasswordResetRequest,
+    ProfileUpdate,
+    Token,
+    UserCreate,
+    UserOut,
+)
 from app.services.email_service import send_password_reset_email
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
@@ -37,14 +44,12 @@ def register(data: UserCreate, db: Session = Depends(get_db)):
     if db.query(User).filter(User.email == email).first():
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    # The very first user becomes admin, everyone after is a farmer
-    role = "admin" if db.query(User).count() == 0 else "farmer"
-
     user = User(
         email=email,
         full_name=data.full_name.strip(),
         hashed_password=hash_password(data.password),
-        role=role,
+        role="farmer",
+        preferred_language=data.preferred_language,
     )
     db.add(user)
     db.commit()
@@ -146,4 +151,16 @@ def confirm_password_reset(data: PasswordResetConfirm, db: Session = Depends(get
 
 @router.get("/me", response_model=UserOut)
 def me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+
+@router.patch("/me", response_model=UserOut)
+def update_me(
+    data: ProfileUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    current_user.preferred_language = data.preferred_language
+    db.commit()
+    db.refresh(current_user)
     return current_user

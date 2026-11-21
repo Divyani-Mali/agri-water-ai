@@ -1,3 +1,5 @@
+import { useTranslate } from "../../context/authContext";
+
 const TONES = {
   green: "bg-forest-50 text-forest-700 ring-forest-200",
   amber: "bg-amber-50 text-amber-800 ring-amber-200",
@@ -7,11 +9,12 @@ const TONES = {
 };
 
 export default function Badge({ tone = "gray", children, className = "" }) {
+  const t = useTranslate();
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${TONES[tone]} ${className}`}
     >
-      {children}
+      {typeof children === "string" ? t(children) : children}
     </span>
   );
 }

@@ -30,7 +30,7 @@ def make_field(client, h):
     ).json()
 
 
-def seed_yesterday(client, field_id):
+def seed_yesterday(client, field_id, owner_headers):
     yday = (datetime.now(timezone.utc) - timedelta(days=1)).replace(
         hour=0, minute=0, second=0, microsecond=0, tzinfo=None
     )
@@ -45,7 +45,7 @@ def seed_yesterday(client, field_id):
                 "wind_speed": 8,
                 "timestamp": (yday + timedelta(hours=h)).isoformat(),
             },
-            headers=SENSOR,
+            headers={**SENSOR, **owner_headers},
         )
 
 
@@ -104,7 +104,7 @@ def test_forecast_works_with_readings(client):
     auth_headers(client, "admin@test.com")
     a = auth_headers(client, "a@test.com")
     field = make_field(client, a)
-    seed_yesterday(client, field["id"])
+    seed_yesterday(client, field["id"], a)
 
     r = client.get(f"/api/fields/{field['id']}/forecast?days=3", headers=a)
     assert r.status_code == 200

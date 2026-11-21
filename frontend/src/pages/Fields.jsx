@@ -8,18 +8,21 @@ import Card from "../components/ui/Card";
 import Icon from "../components/ui/Icon";
 import PageHeader from "../components/ui/PageHeader";
 import { EmptyState, ErrorState, Skeleton } from "../components/ui/Feedback";
+import { useTranslate } from "../context/authContext";
 
 function Fact({ icon, label, value }) {
+  const t = useTranslate();
   return (
     <div className="flex items-center gap-2 text-sm">
       <Icon name={icon} size={15} className="text-ink-mute" />
-      <span className="text-ink-mute">{label}</span>
+      <span className="text-ink-mute">{t(label)}</span>
       <span className="ml-auto font-medium text-ink">{value}</span>
     </div>
   );
 }
 
 export default function Fields() {
+  const t = useTranslate();
   const [farms, setFarms] = useState([]);
   const [fields, setFields] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -54,9 +57,9 @@ export default function Fields() {
     <>
       <PageHeader
         title="Fields"
-        subtitle={loading ? "Loading fields..." : `${fmtNum(fields.length)} fields across ${fmtNum(farms.length)} farms`}
+        subtitle={loading ? t("Loading fields...") : t("{fields} fields across {farms} farms", { fields: fmtNum(fields.length), farms: fmtNum(farms.length) })}
         crumbs={[{ label: "Farms", to: "/" }, { label: "Fields" }]}
-        action={<Button as={Link} to="/" variant="secondary" icon="arrowLeft">Back to farms</Button>}
+        action={<Button as={Link} to="/" variant="secondary" icon="arrowLeft">{t("Back to farms")}</Button>}
       />
 
       {error && <div className="mb-4"><ErrorState message={error} onRetry={() => { setLoading(true); load(); }} /></div>}
@@ -77,9 +80,9 @@ export default function Fields() {
           title="No fields yet"
           text="Add a field to one of your farms to start monitoring sensor readings and irrigation forecasts."
           action={farms.length ? (
-            <Button as={Link} to={`/farms/${farms[0].id}`} icon="plus">Open a farm to add a field</Button>
+            <Button as={Link} to={`/farms/${farms[0].id}`} icon="plus">{t("Open a farm to add a field")}</Button>
           ) : (
-            <Button as={Link} to="/" icon="farm">Go to farms</Button>
+            <Button as={Link} to="/" icon="farm">{t("Go to farms")}</Button>
           )}
         />
       ) : (
@@ -98,11 +101,11 @@ export default function Fields() {
                 </div>
                 <div className="mt-4 space-y-2.5">
                   <Fact icon="mountain" label="Soil" value={cap(field.soil_type)} />
-                  <Fact icon="ruler" label="Area" value={`${field.area_acres} acres`} />
+                  <Fact icon="ruler" label="Area" value={`${field.area_acres} ${t("acres")}`} />
                   <Fact icon="calendar" label="Planted" value={fmtDate(field.planting_date)} />
                 </div>
                 <Button as={Link} to={`/fields/${field.id}`} icon="activity" size="sm" className="mt-5 self-start">
-                  View live data
+                  {t("View live data")}
                 </Button>
               </Card>
             </li>

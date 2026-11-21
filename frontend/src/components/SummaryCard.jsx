@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import Card from "./ui/Card";
 import Icon from "./ui/Icon";
 import { Skeleton } from "./ui/Feedback";
+import { useTranslate } from "../context/authContext";
 
 const TONES = {
   green: "bg-forest-50 text-forest-700",
@@ -12,13 +13,14 @@ const TONES = {
 
 // Small statistic card used on the Farms and Admin pages. value=null shows a skeleton.
 export default function SummaryCard({ icon, label, value, tone = "green", to }) {
+  const t = useTranslate();
   const body = (
     <Card className={`flex items-center gap-4 p-4 ${to ? "transition-shadow hover:shadow-md" : ""}`}>
       <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${TONES[tone]}`}>
         <Icon name={icon} size={22} />
       </span>
       <div className="min-w-0">
-        <p className="text-xs font-medium text-ink-mute">{label}</p>
+        <p className="text-xs font-medium text-ink-mute">{t(label)}</p>
         {value === null ? <Skeleton className="mt-1 h-7 w-16" /> : <p className="text-2xl font-semibold tracking-tight text-ink">{value}</p>}
       </div>
     </Card>

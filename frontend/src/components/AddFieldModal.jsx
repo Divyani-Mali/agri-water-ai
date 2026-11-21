@@ -5,6 +5,7 @@ import Button from "./ui/Button";
 import FormField from "./ui/FormField";
 import Modal from "./ui/Modal";
 import { Banner } from "./ui/Feedback";
+import { useTranslate } from "../context/authContext";
 
 const initial = () => ({
   name: "",
@@ -15,6 +16,7 @@ const initial = () => ({
 });
 
 export default function AddFieldModal({ open, farmId, onClose, onCreated }) {
+  const t = useTranslate();
   const [form, setForm] = useState(initial);
   const [errors, setErrors] = useState({});
   const [error, setError] = useState("");
@@ -81,14 +83,14 @@ export default function AddFieldModal({ open, farmId, onClose, onCreated }) {
           <FormField label="Crop">
             {(props, cls) => (
               <select {...props} className={cls} value={form.crop_type} onChange={set("crop_type")}>
-                {CROPS.map((c) => <option key={c} value={c}>{cap(c)}</option>)}
+                {CROPS.map((c) => <option key={c} value={c}>{t(cap(c))}</option>)}
               </select>
             )}
           </FormField>
           <FormField label="Soil type">
             {(props, cls) => (
               <select {...props} className={cls} value={form.soil_type} onChange={set("soil_type")}>
-                {SOILS.map((s) => <option key={s} value={s}>{cap(s)}</option>)}
+                {SOILS.map((s) => <option key={s} value={s}>{t(cap(s))}</option>)}
               </select>
             )}
           </FormField>
