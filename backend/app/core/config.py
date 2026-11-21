@@ -44,6 +44,11 @@ class Settings(BaseSettings):
     # Output audio format for TTS.  "mp3" works for all providers; "wav" for mock only.
     TTS_AUDIO_FORMAT: str = "mp3"
 
+    # ------------------------------------------------------------------ Groq LLM
+    # API key for the Groq LLM service (dynamic chatbot responses).
+    # Leave empty to keep the existing rule-based chatbot behaviour.
+    GROQ_API_KEY: str = ""
+
     model_config = SettingsConfigDict(env_file=".env")
 
     @model_validator(mode="after")

@@ -20,3 +20,5 @@ matplotlib
 openai
 # TTS provider — google-cloud-texttospeech only needed when TTS_PROVIDER=google
 google-cloud-texttospeech
+# LLM for dynamic chatbot responses
+groq

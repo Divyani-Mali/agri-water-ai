@@ -8,6 +8,7 @@ from app.models.models import Alert, Farm, IrrigationLog, SensorReading, User
 from app.models.models import Field as FieldModel
 from app.schemas.chat import ChatResponse
 from app.services import chat_nlu as nlu
+from app.services import groq_service
 from app.services.forecast_service import ModelNotReady, NotEnoughData, forecast_field
 from ml.agronomy import SOILS
 
@@ -223,12 +224,11 @@ def handle_message(db: Session, user: User, message: str, requested_lang=None) -
 
     if intent == "safety":
         return _reply(lang, intent, say("safety", lang), suggestions=False)
-    if intent == "greeting":
-        return _reply(lang, intent, say("greeting", lang))
-    if intent == "help":
-        return _reply(lang, intent, say("help", lang))
-    if intent == "unknown":
-        return _reply(lang, intent, say("unknown", lang))
+    if intent in ("greeting", "help", "unknown"):
+        groq_reply = groq_service.generate_response(db, user, message, lang)
+        if groq_reply is not None:
+            return _reply(lang, intent, groq_reply)
+        return _reply(lang, intent, say(intent, lang))
     if intent == "units":
         return _units(text, lang)
 
